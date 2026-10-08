@@ -16,6 +16,7 @@ You must respond STRICTLY with valid JSON in the following format:
   "target_geo": "Target City or Country",
   "target_niches": ["Niche 1", "Niche 2"],
   "search_queries": ["Query 1 in target geo", "Query 2 in target geo"],
+  "max_places": 100,
   "sources": ["gmaps"],
   "custom_variables": [
     {

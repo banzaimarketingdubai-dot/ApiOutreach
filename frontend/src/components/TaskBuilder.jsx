@@ -8,6 +8,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
   const [geo, setGeo] = useState('Dubai');
   const [niche, setNiche] = useState('Dental Clinics');
   const [query, setQuery] = useState('Dental Clinic in Dubai');
+  const [maxPlaces, setMaxPlaces] = useState(100);
   const [submitting, setSubmitting] = useState(false);
   const [activeCampaignId, setActiveCampaignId] = useState(null);
 
@@ -23,7 +24,8 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
           campaign_name: campaignName,
           target_geo: geo,
           target_niches: [niche],
-          search_queries: [query],
+          search_queries: query.split(',').map(q => q.trim()),
+          max_places: maxPlaces,
           sources: ['gmaps'],
           custom_variables: [
             { key: 'has_online_booking', description: 'Check if site has online booking', variable_type: 'boolean' }
@@ -104,14 +106,25 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
               </div>
             </div>
 
-            <div>
-              <label className="text-slate-400 font-semibold mb-1 block">Search Query</label>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 font-semibold mb-1 block">Search Query</label>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 font-semibold mb-1 block">Max Leads</label>
+                <input
+                  type="number"
+                  value={maxPlaces}
+                  onChange={(e) => setMaxPlaces(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
             </div>
 
             <button
