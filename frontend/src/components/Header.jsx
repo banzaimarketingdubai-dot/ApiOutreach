@@ -84,6 +84,17 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) 
               <GitMerge className="w-3.5 h-3.5" />
               <span>Merge Center</span>
             </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'admin'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              <span>Settings & Templates</span>
+            </button>
           </nav>
 
           <button

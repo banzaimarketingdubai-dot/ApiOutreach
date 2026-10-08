@@ -6,6 +6,7 @@ import TaskBuilder from './components/TaskBuilder';
 import AIStrategistModal from './components/AIStrategistModal';
 import LeadDrawer from './components/LeadDrawer';
 import MergeCenter from './components/MergeCenter';
+import AdminPanel from './components/AdminPanel';
 import { fetchLeads, fetchCampaigns } from './services/api';
 
 export default function App() {
@@ -75,6 +76,9 @@ export default function App() {
         )}
         {activeTab === 'merge' && (
           <MergeCenter />
+        )}
+        {activeTab === 'admin' && (
+          <AdminPanel />
         )}
 
       </main>

@@ -128,3 +128,43 @@ export function getExportCsvUrl(filters = {}) {
   const query = new URLSearchParams(filters).toString();
   return `${API_BASE}/export/csv?${query}`;
 }
+
+// Vault / Settings
+export async function getVaultStatus() {
+  const res = await fetch(`${API_BASE}/settings/vault`);
+  if (!res.ok) throw new Error('Failed to fetch vault');
+  return res.json();
+}
+
+export async function setVaultKey(provider, api_key) {
+  const res = await fetch(`${API_BASE}/settings/vault`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, api_key })
+  });
+  if (!res.ok) throw new Error('Failed to set key');
+  return res.json();
+}
+
+// Templates
+export async function getTemplates() {
+  const res = await fetch(`${API_BASE}/templates`);
+  if (!res.ok) throw new Error('Failed to fetch templates');
+  return res.json();
+}
+
+export async function createTemplate(data) {
+  const res = await fetch(`${API_BASE}/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Failed to create template');
+  return res.json();
+}
+
+export async function deleteTemplate(id) {
+  const res = await fetch(`${API_BASE}/templates/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete template');
+  return res.json();
+}
