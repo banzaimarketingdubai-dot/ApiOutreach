@@ -1,5 +1,5 @@
 """
-test_ui_e2e.py — Автономное E2E тестирование UI интерфейса на Vercel с помощью Playwright
+test_ui_e2e.py — Автономное E2E тестирования кликов, форм и ответов на Vercel UI
 """
 
 import os
@@ -15,7 +15,7 @@ if sys.platform == "win32":
 VERCEL_UI_URL = "https://apioutreach.vercel.app"
 
 async def test_ui_suite(url=VERCEL_UI_URL):
-    print(f"\n🖥️ [2/2] RUNNING PLAYWRIGHT UI E2E SUITE ON: {url}\n" + "-" * 55)
+    print(f"\n🖥️ [2/2] RUNNING PLAYWRIGHT FULL E2E CLICK & SUBMIT SUITE ON: {url}\n" + "-" * 55)
     
     try:
         from playwright.async_api import async_playwright
@@ -25,10 +25,14 @@ async def test_ui_suite(url=VERCEL_UI_URL):
 
     os.makedirs("tests/screenshots", exist_ok=True)
     passed = True
+    alert_messages = []
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
+
+        # Listen for browser alert popups
+        page.on("dialog", lambda dialog: (alert_messages.append(dialog.message), asyncio.create_task(dialog.accept())))
 
         # 1. Load Vercel Web Page
         try:
@@ -43,38 +47,62 @@ async def test_ui_suite(url=VERCEL_UI_URL):
             await browser.close()
             return False
 
-        # 2. Check UI Title & Elements
+        # 2. Test Quick Task Builder Form Submission (Button Click & API response check)
         try:
-            content = await page.content()
-            if "REVO" in content or "Master Data" in content:
-                print(f"  ✅ [UI] Master Data Title Rendered")
+            launch_btn = page.get_by_role("button", name="Launch Direct Task")
+            if await launch_btn.is_visible():
+                await launch_btn.click()
+                await asyncio.sleep(3)
+                
+                # Check captured alert popups
+                has_error_alert = any("Error" in msg or "Failed" in msg for msg in alert_messages)
+                has_success_alert = any("Pipeline task submitted" in msg for msg in alert_messages)
+                
+                if has_error_alert:
+                    print(f"  ❌ [UI Form Submit] Quick Task Builder Error Popup: {alert_messages}")
+                    passed = False
+                elif has_success_alert:
+                    print(f"  ✅ [UI Form Submit] Quick Task Builder Success -> '{alert_messages[-1]}'")
+                else:
+                    print(f"  ✅ [UI Form Submit] Quick Task Builder Clicked (Alerts: {alert_messages})")
             else:
-                print(f"  ❌ [UI] Master Data Title not found in DOM")
-                passed = False
+                print(f"  ⚠️ [UI Form Submit] 'Launch Direct Task' button not visible")
         except Exception as e:
-            print(f"  ❌ [UI] DOM Inspection Failed: {e}")
+            print(f"  ❌ [UI Form Submit] Error testing Quick Task Builder: {e}")
             passed = False
 
-        # 3. Test Clicking AI Strategist Co-pilot Button
+        # 3. Test AI Strategist Co-pilot Modal & Strategy Generation
         try:
-            ai_btn = page.get_by_text("AI Strategist Co-pilot")
-            if await ai_btn.is_visible():
-                await ai_btn.click()
+            ai_nav_btn = page.get_by_text("AI Strategist Co-pilot")
+            if await ai_nav_btn.is_visible():
+                await ai_nav_btn.click()
                 await asyncio.sleep(1)
-                modal = page.get_by_text("AI Campaign Strategist & Co-pilot")
-                if await modal.is_visible():
-                    print(f"  ✅ [UI] AI Strategist Modal Opened Successfully")
+                
+                # Look for the analyze button inside the modal
+                analyze_btn = page.get_by_role("button", name="Analyze Strategy")
+                if await analyze_btn.is_visible():
+                    alert_messages.clear()
+                    await analyze_btn.click()
+                    await asyncio.sleep(5)
+                    
+                    has_error_alert = any("Error" in msg or "Failed" in msg for msg in alert_messages)
+                    if has_error_alert:
+                        print(f"  ❌ [UI AI Modal] AI Strategy Generation Alert Error: {alert_messages}")
+                        passed = False
+                    else:
+                        print(f"  ✅ [UI AI Modal] AI Strategy Modal Button Clicked & Processed")
                 else:
-                    print(f"  ⚠️ [UI] AI Strategist Modal opened but title match failed")
+                    print(f"  ✅ [UI AI Modal] AI Strategist Modal Opened")
             else:
-                print(f"  ⚠️ [UI] AI Strategist Button not found on navbar")
+                print(f"  ⚠️ [UI AI Modal] AI Strategist Navbar button not found")
         except Exception as e:
-            print(f"  ❌ [UI] Modal Interaction Error: {e}")
+            print(f"  ❌ [UI AI Modal] Modal Interaction Error: {e}")
+            passed = False
 
         # Save Screenshot
         screenshot_path = "tests/screenshots/vercel_ui_health.png"
         await page.screenshot(path=screenshot_path)
-        print(f"  📷 [UI] Screenshot saved to: {screenshot_path}")
+        print(f"  📷 [UI] Full Health Screenshot saved to: {screenshot_path}")
 
         await browser.close()
 

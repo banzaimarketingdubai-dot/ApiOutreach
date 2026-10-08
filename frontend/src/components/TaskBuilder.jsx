@@ -22,9 +22,15 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
           target_geo: geo,
           target_niches: [niche],
           search_queries: [query],
+          sources: ['gmaps'],
           custom_variables: [
             { key: 'has_online_booking', description: 'Check if site has online booking', variable_type: 'boolean' }
-          ]
+          ],
+          scoring_rules: {
+            missing_website_penalty: 10,
+            low_rating_penalty: 15,
+            low_reviews_penalty: 20
+          }
         }
       };
       await createCampaign(payload);
