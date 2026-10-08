@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ENV PYTHONPATH=/app/backend:/app
+ENV C_FORCE_ROOT=1
 
 EXPOSE 8000
 
