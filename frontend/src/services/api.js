@@ -1,4 +1,7 @@
-const API_BASE = '/api/v1';
+const IS_PROD = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+const API_BASE = IS_PROD
+  ? 'https://web-production-c4d98.up.railway.app/api/v1'
+  : '/api/v1';
 
 export async function fetchLeads(params = {}) {
   const query = new URLSearchParams(params).toString();
