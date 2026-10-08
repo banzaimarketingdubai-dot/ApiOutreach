@@ -151,7 +151,7 @@ async def pause_campaign(
     if c.status == CampaignStatus.RUNNING:
         c.status = CampaignStatus.PAUSED
         await _append_log(c, db, "warning", "Campaign paused by operator.")
-    return {"status": c.status}
+    return {"status": c.status.value}
 
 @router.post("/{campaign_id}/resume")
 async def resume_campaign(
@@ -168,7 +168,7 @@ async def resume_campaign(
     if c.status == CampaignStatus.PAUSED:
         c.status = CampaignStatus.RUNNING
         await _append_log(c, db, "info", "Campaign resumed by operator.")
-    return {"status": c.status}
+    return {"status": c.status.value}
 
 @router.post("/{campaign_id}/halt")
 async def stop_campaign(
@@ -185,7 +185,7 @@ async def stop_campaign(
     if c.status in [CampaignStatus.RUNNING, CampaignStatus.PAUSED, CampaignStatus.PENDING]:
         c.status = CampaignStatus.CANCELLED
         await _append_log(c, db, "error", "Campaign emergency stopped by operator.")
-    return {"status": c.status}
+    return {"status": c.status.value}
 
 @router.post("/{campaign_id}/retry-failed")
 async def retry_failed_batches(
