@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCampaignStatus, retryFailed } from '../services/api';
+import { getCampaignStatus, retryFailed, pauseCampaign, resumeCampaign, stopCampaign } from '../services/api';
 import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight, Target, RefreshCw } from 'lucide-react';
 import EditCampaignModal from './EditCampaignModal';
 import LeadScoreSettingsModal from './LeadScoreSettingsModal';
@@ -153,7 +153,12 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
         <div className="flex space-x-2">
            {status === 'RUNNING' && (
              <button 
-               onClick={async () => { await import('../services/api').then(m => m.pauseCampaign(campaignId)); setData({...data, status: 'PAUSED'}) }}
+               onClick={async () => { 
+                 try {
+                   await pauseCampaign(campaignId); 
+                   setData({...data, status: 'PAUSED'});
+                 } catch(e) { alert("Error pausing: " + e.message); }
+               }}
                className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
              >
                <Pause className="w-3 h-3" /> <span>Pause</span>
@@ -161,7 +166,12 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
            )}
            {status === 'PAUSED' && (
              <button 
-               onClick={async () => { await import('../services/api').then(m => m.resumeCampaign(campaignId)); setData({...data, status: 'RUNNING'}) }}
+               onClick={async () => { 
+                 try {
+                   await resumeCampaign(campaignId); 
+                   setData({...data, status: 'RUNNING'});
+                 } catch(e) { alert("Error resuming: " + e.message); }
+               }}
                className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
              >
                <Play className="w-3 h-3" /> <span>Resume</span>
@@ -169,7 +179,12 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
            )}
            {['RUNNING', 'PAUSED', 'PENDING'].includes(status) && (
              <button 
-               onClick={async () => { await import('../services/api').then(m => m.stopCampaign(campaignId)); setData({...data, status: 'CANCELLED'}) }}
+               onClick={async () => { 
+                 try {
+                   await stopCampaign(campaignId); 
+                   setData({...data, status: 'CANCELLED'});
+                 } catch(e) { alert("Error stopping: " + e.message); }
+               }}
                className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
              >
                <Square className="w-3 h-3" /> <span>Stop</span>
