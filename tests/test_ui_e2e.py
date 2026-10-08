@@ -106,12 +106,64 @@ async def test_ui_suite(url=VERCEL_UI_URL):
                         passed = False
                     else:
                         print(f"  ✅ [UI AI Modal] AI Strategy Modal Form Clicked & Generated Strategy!")
+                        
+                    # Close the modal
+                    await page.keyboard.press("Escape")
+                    await asyncio.sleep(1)
                 else:
                     print(f"  ✅ [UI AI Modal] AI Strategist Modal Opened")
+                    await page.keyboard.press("Escape")
             else:
                 print(f"  ⚠️ [UI AI Modal] AI Strategist Navbar button not found")
         except Exception as e:
             print(f"  ❌ [UI AI Modal] Modal Interaction Error: {e}")
+            passed = False
+
+        # 5. Test Merge Center Tab Navigation
+        try:
+            merge_tab = page.get_by_text("Merge Center")
+            if await merge_tab.is_visible():
+                await merge_tab.click()
+                await asyncio.sleep(1)
+                
+                scan_btn = page.get_by_role("button", name="Scan for Duplicates")
+                if await scan_btn.is_visible():
+                    print(f"  ✅ [UI Nav] Switched to 'Merge Center' Tab & 'Scan' button found")
+                else:
+                    print(f"  ⚠️ [UI Nav] 'Scan for Duplicates' button missing in Merge Center")
+            else:
+                print(f"  ⚠️ [UI Nav] 'Merge Center' tab button not found")
+        except Exception as e:
+            print(f"  ❌ [UI Nav] Error in Merge Center test: {e}")
+            passed = False
+
+        # 6. Test Settings & Templates Tab Navigation
+        try:
+            admin_tab = page.get_by_text("Settings & Templates")
+            if await admin_tab.is_visible():
+                await admin_tab.click()
+                await asyncio.sleep(1)
+                
+                vault_save_btn = page.get_by_role("button", name="Save to Vault")
+                if await vault_save_btn.is_visible():
+                    print(f"  ✅ [UI Nav] Switched to 'Settings & Templates' Tab (Vault loaded)")
+                else:
+                    print(f"  ⚠️ [UI Nav] 'Save to Vault' missing in Admin Panel")
+                
+                # Switch to Templates sub-tab
+                tpl_tab = page.get_by_text("Prompt Templates")
+                if await tpl_tab.is_visible():
+                    await tpl_tab.click()
+                    await asyncio.sleep(1)
+                    create_tpl_btn = page.get_by_role("button", name="Create Template")
+                    if await create_tpl_btn.is_visible():
+                        print(f"  ✅ [UI Nav] Switched to 'Prompt Templates' sub-tab & 'Create Template' found")
+                    else:
+                        print(f"  ⚠️ [UI Nav] 'Create Template' missing")
+            else:
+                print(f"  ⚠️ [UI Nav] 'Settings & Templates' tab button not found")
+        except Exception as e:
+            print(f"  ❌ [UI Nav] Error in Admin Panel test: {e}")
             passed = False
 
         # Save Screenshot

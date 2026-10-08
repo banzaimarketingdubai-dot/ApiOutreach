@@ -111,6 +111,60 @@ def test_api_suite(base_url=RAILWAY_BASE_URL):
     except Exception as e:
         print(f"  ❌ [GET  /api/v1/export/csv] Failed: {e}")
 
+    # 7. Vault Status GET /api/v1/settings/vault
+    total += 1
+    try:
+        r = requests.get(f"{base_url}/api/v1/settings/vault", timeout=10)
+        if r.status_code == 200:
+            print(f"  ✅ [GET  /api/v1/settings/vault] Vault Status -> HTTP 200 OK")
+            passed += 1
+        else:
+            print(f"  ❌ [GET  /api/v1/settings/vault] Failed: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"  ❌ [GET  /api/v1/settings/vault] Failed: {e}")
+
+    # 8. Templates GET /api/v1/templates
+    total += 1
+    try:
+        r = requests.get(f"{base_url}/api/v1/templates", timeout=10)
+        if r.status_code == 200:
+            count = len(r.json())
+            print(f"  ✅ [GET  /api/v1/templates] List Templates -> HTTP 200 OK ({count} templates)")
+            passed += 1
+        else:
+            print(f"  ❌ [GET  /api/v1/templates] Failed: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"  ❌ [GET  /api/v1/templates] Failed: {e}")
+
+    # 9. Duplicates GET /api/v1/leads/tools/duplicates
+    total += 1
+    try:
+        r = requests.get(f"{base_url}/api/v1/leads/tools/duplicates", timeout=15)
+        if r.status_code == 200:
+            groups = r.json()
+            print(f"  ✅ [GET  /api/v1/leads/tools/duplicates] Merge Center -> HTTP 200 OK ({len(groups)} groups)")
+            passed += 1
+        else:
+            print(f"  ❌ [GET  /api/v1/leads/tools/duplicates] Failed: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"  ❌ [GET  /api/v1/leads/tools/duplicates] Failed: {e}")
+
+    # 10. AI Dry Run POST /api/v1/ai/dry-run
+    total += 1
+    try:
+        payload = {
+            "prompt_template": "Hello {{company_name}} in {{city}}",
+            "lead_ids": [] # empty array is fine for a status check
+        }
+        r = requests.post(f"{base_url}/api/v1/ai/dry-run", json=payload, timeout=10)
+        if r.status_code == 200:
+            print(f"  ✅ [POST /api/v1/ai/dry-run] AI Sandbox -> HTTP 200 OK")
+            passed += 1
+        else:
+            print(f"  ❌ [POST /api/v1/ai/dry-run] Failed: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"  ❌ [POST /api/v1/ai/dry-run] Failed: {e}")
+
     print("-" * 55)
     print(f"📊 RESULT: {passed}/{total} API tests passed.")
     return passed == total
