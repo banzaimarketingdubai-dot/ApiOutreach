@@ -1,7 +1,16 @@
-import React from 'react';
-import { Bot, Sparkles, Database, Layers, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2 } from 'lucide-react';
+import { fetchApifyBalance } from '../services/api';
 
 export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) {
+  const [apifyData, setApifyData] = useState(null);
+
+  useEffect(() => {
+    fetchApifyBalance()
+      .then((data) => setApifyData(data))
+      .catch((err) => console.error('Apify balance fetch error:', err));
+  }, []);
+
   return (
     <header className="border-b border-slate-800 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -24,8 +33,21 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) 
           </div>
         </div>
 
-        {/* Tabs & Actions */}
+        {/* Center/Right: Apify Status Badge + Nav Tabs + Actions */}
         <div className="flex items-center space-x-4">
+
+          {/* Apify Balance Widget */}
+          {apifyData && apifyData.connected && (
+            <div className="hidden lg:flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs shadow-inner">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="text-left">
+                <span className="text-slate-300 font-medium block text-[11px]">
+                  Apify ({apifyData.plan_name}): <span className="text-emerald-400 font-bold">${apifyData.remaining_usd}</span> / ${apifyData.monthly_limit_usd}
+                </span>
+              </div>
+            </div>
+          )}
+
           <nav className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setActiveTab('leads')}

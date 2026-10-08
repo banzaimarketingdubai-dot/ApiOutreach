@@ -42,6 +42,12 @@ export async function fetchCampaigns() {
   return res.json();
 }
 
+export async function fetchApifyBalance() {
+  const res = await fetch(`${API_BASE}/apify/balance`);
+  if (!res.ok) throw new Error('Failed to fetch Apify balance');
+  return res.json();
+}
+
 export function getExportCsvUrl(filters = {}) {
   const query = new URLSearchParams(filters).toString();
   return `${API_BASE}/export/csv?${query}`;

@@ -11,6 +11,7 @@ from app.api.campaigns import router as campaigns_router
 from app.api.leads import router as leads_router
 from app.api.tasks import router as tasks_router
 from app.api.export import router as export_router
+from app.api.apify import router as apify_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ app.include_router(campaigns_router, prefix=f"{settings.API_V1_STR}/campaigns", 
 app.include_router(leads_router, prefix=f"{settings.API_V1_STR}/leads", tags=["Leads"])
 app.include_router(tasks_router, prefix=f"{settings.API_V1_STR}/tasks", tags=["Tasks"])
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["Export"])
+app.include_router(apify_router, prefix=f"{settings.API_V1_STR}/apify", tags=["Apify Account"])
 
 @app.get("/")
 async def root():

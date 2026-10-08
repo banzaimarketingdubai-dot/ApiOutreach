@@ -30,7 +30,20 @@ def test_api_suite(base_url=RAILWAY_BASE_URL):
     except Exception as e:
         print(f"  ❌ [GET  /] Healthcheck Failed: {e}")
 
-    # 2. AI Strategist POST /api/v1/ai/strategy
+    # 2. Apify Account Balance GET /api/v1/apify/balance
+    total += 1
+    try:
+        r = requests.get(f"{base_url}/api/v1/apify/balance", timeout=15)
+        if r.status_code == 200 and r.json().get("connected") is True:
+            data = r.json()
+            print(f"  ✅ [GET  /api/v1/apify/balance] Apify Balance -> 200 OK (Plan: {data.get('plan_name')}, Remaining: ${data.get('remaining_usd')})")
+            passed += 1
+        else:
+            print(f"  ❌ [GET  /api/v1/apify/balance] Failed: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"  ❌ [GET  /api/v1/apify/balance] Failed: {e}")
+
+    # 3. AI Strategist POST /api/v1/ai/strategy
     total += 1
     try:
         payload = {
@@ -48,7 +61,7 @@ def test_api_suite(base_url=RAILWAY_BASE_URL):
     except Exception as e:
         print(f"  ❌ [POST /api/v1/ai/strategy] Failed: {e}")
 
-    # 3. Create Campaign POST /api/v1/campaigns
+    # 4. Create Campaign POST /api/v1/campaigns
     total += 1
     try:
         payload = {
@@ -73,7 +86,7 @@ def test_api_suite(base_url=RAILWAY_BASE_URL):
     except Exception as e:
         print(f"  ❌ [POST /api/v1/campaigns] Failed: {e}")
 
-    # 4. Fetch Leads GET /api/v1/leads
+    # 5. Fetch Leads GET /api/v1/leads
     total += 1
     try:
         r = requests.get(f"{base_url}/api/v1/leads", timeout=10)
@@ -86,7 +99,7 @@ def test_api_suite(base_url=RAILWAY_BASE_URL):
     except Exception as e:
         print(f"  ❌ [GET  /api/v1/leads] Failed: {e}")
 
-    # 5. Export CSV GET /api/v1/export/csv
+    # 6. Export CSV GET /api/v1/export/csv
     total += 1
     try:
         r = requests.get(f"{base_url}/api/v1/export/csv", timeout=10)
