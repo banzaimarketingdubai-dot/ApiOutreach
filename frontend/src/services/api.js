@@ -48,6 +48,34 @@ export async function getCampaignStatus(id) {
   return res.json();
 }
 
+export async function updateCampaign(id, data) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Failed to update campaign');
+  return res.json();
+}
+
+export async function pauseCampaign(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/pause`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to pause campaign');
+  return res.json();
+}
+
+export async function resumeCampaign(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/resume`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to resume campaign');
+  return res.json();
+}
+
+export async function stopCampaign(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/stop`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to stop campaign');
+  return res.json();
+}
+
 export async function fetchApifyBalance() {
   const res = await fetch(`${API_BASE}/apify/balance`);
   if (!res.ok) throw new Error('Failed to fetch Apify balance');

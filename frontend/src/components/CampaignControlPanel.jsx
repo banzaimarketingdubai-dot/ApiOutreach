@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getCampaignStatus } from '../services/api';
-import { Play, Pause, Square, Activity, Database, Sparkles, AlertCircle, X, ChevronRight } from 'lucide-react';
+import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight } from 'lucide-react';
+import EditCampaignModal from './EditCampaignModal';
 
 export default function CampaignControlPanel({ campaignId, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (!campaignId) return;
@@ -117,20 +119,50 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
         )}
       </div>
 
-      {/* Action Bar Placeholder */}
+      {/* Action Bar */}
       <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center">
         <div className="text-[10px] text-slate-500">Live feed connected via HTTP Polling (2s)</div>
         <div className="flex space-x-2">
-           {/* Step 1.2 Buttons will go here */}
-           <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-semibold flex items-center space-x-1 cursor-not-allowed opacity-50">
-             <Pause className="w-3 h-3" /> <span>Pause</span>
+           <button 
+             onClick={() => setEditModalOpen(true)}
+             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all mr-2"
+           >
+             <Settings className="w-3 h-3" /> <span>Edit</span>
            </button>
-           <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-semibold flex items-center space-x-1 cursor-not-allowed opacity-50">
-             <Square className="w-3 h-3" /> <span>Stop</span>
-           </button>
+           {status === 'RUNNING' && (
+             <button 
+               onClick={async () => { await import('../services/api').then(m => m.pauseCampaign(campaignId)); setData({...data, status: 'PAUSED'}) }}
+               className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+             >
+               <Pause className="w-3 h-3" /> <span>Pause</span>
+             </button>
+           )}
+           {status === 'PAUSED' && (
+             <button 
+               onClick={async () => { await import('../services/api').then(m => m.resumeCampaign(campaignId)); setData({...data, status: 'RUNNING'}) }}
+               className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+             >
+               <Play className="w-3 h-3" /> <span>Resume</span>
+             </button>
+           )}
+           {['RUNNING', 'PAUSED', 'PENDING'].includes(status) && (
+             <button 
+               onClick={async () => { await import('../services/api').then(m => m.stopCampaign(campaignId)); setData({...data, status: 'CANCELLED'}) }}
+               className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+             >
+               <Square className="w-3 h-3" /> <span>Stop</span>
+             </button>
+           )}
         </div>
       </div>
 
+      {editModalOpen && (
+        <EditCampaignModal 
+          campaignId={campaignId}
+          initialData={data}
+          onClose={() => setEditModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -21,6 +21,12 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Temporary auto-migration for new JSONB column
+            from sqlalchemy import text
+            try:
+                await conn.execute(text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;"))
+            except Exception as e:
+                logger.info(f"Alter table logs failed or already exists: {e}")
         logger.info("Database tables initialized successfully.")
     except Exception as e:
         logger.warning(f"Database table initialization skipped/warning: {e}")

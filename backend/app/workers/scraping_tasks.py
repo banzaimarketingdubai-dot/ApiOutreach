@@ -53,13 +53,27 @@ def run_campaign_scraping(self, campaign_id: str):
 
             if api_token:
                 try:
-                    client = ApifyClient(api_token)
-                    run_input = {
-                        "searchStringsArray": queries,
-                        "maxCrawledPlaces": max_places,
-                        "language": "en"
-                    }
-                    run_res = client.actor(ACTOR_ID).call(run_input=run_input)
+                    # Budget Guard Check
+                    from app.api.apify import get_apify_balance
+                    balance_data = await get_apify_balance()
+                    if balance_data.get("connected") and balance_data.get("remaining_usd", 1.0) < 0.5:
+                        await add_log("error", f"Budget Guard: Apify balance too low (${balance_data.get('remaining_usd')}). Pausing campaign.")
+                        campaign.status = CampaignStatus.PAUSED
+                        await db.commit()
+                        
+                        # Wait for admin to resume
+                        while campaign.status == CampaignStatus.PAUSED:
+                            await asyncio.sleep(10)
+                            await db.refresh(campaign)
+
+                    if campaign.status != CampaignStatus.CANCELLED:
+                        client = ApifyClient(api_token)
+                        run_input = {
+                            "searchStringsArray": queries,
+                            "maxCrawledPlaces": max_places,
+                            "language": "en"
+                        }
+                        run_res = client.actor(ACTOR_ID).call(run_input=run_input)
                     dataset_id = run_res.get("defaultDatasetId") if isinstance(run_res, dict) else getattr(run_res, "default_dataset_id", None)
                     if dataset_id:
                         await add_log("info", f"Apify Actor finished. Dataset ID: {dataset_id}")
@@ -104,6 +118,15 @@ def run_campaign_scraping(self, campaign_id: str):
             merged_count = 0
 
             for raw in scraped_items:
+                # Check status periodically
+                await db.refresh(campaign)
+                while campaign.status == CampaignStatus.PAUSED:
+                    await asyncio.sleep(3)
+                    await db.refresh(campaign)
+                
+                if campaign.status == CampaignStatus.CANCELLED:
+                    await add_log("error", "Task aborted: Campaign was cancelled.")
+                    break
                 title = raw.get("title") or raw.get("name")
                 if not title:
                     continue
@@ -118,12 +141,16 @@ def run_campaign_scraping(self, campaign_id: str):
 
                 has_phone = bool(phone)
                 has_web = bool(website)
+                
+                # Fetch hot-swapped config dynamically
+                current_ai_cfg = campaign.ai_config or {}
+
                 score, audit_notes = calculate_revo_score_and_audit(
                     rating=rating,
                     reviews_count=reviews,
                     has_website=has_web,
                     has_phone=has_phone,
-                    scoring_rules=ai_cfg.get("scoring_rules", {})
+                    scoring_rules=current_ai_cfg.get("scoring_rules", {})
                 )
 
                 lead_data = {
@@ -153,12 +180,14 @@ def run_campaign_scraping(self, campaign_id: str):
                 "new_leads_created": saved_count,
                 "merged_leads": merged_count
             }
-            campaign.status = CampaignStatus.COMPLETED
-            await add_log("success", f"Scraping completed. Added {saved_count} new leads, merged {merged_count}.")
+            if campaign.status != CampaignStatus.CANCELLED:
+                campaign.status = CampaignStatus.COMPLETED
+                await add_log("success", f"Scraping completed. Added {saved_count} new leads, merged {merged_count}.")
             await db.commit()
 
             # Trigger Enrichment task for leads with website
-            from app.workers.enrichment_tasks import run_campaign_enrichment
-            run_campaign_enrichment.delay(campaign_id)
+            if campaign.status != CampaignStatus.CANCELLED:
+                from app.workers.enrichment_tasks import run_campaign_enrichment
+                run_campaign_enrichment.delay(campaign_id)
 
     asyncio.run(_process())

@@ -61,6 +61,31 @@ async def get_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
     return c
 
+@router.patch("/{campaign_id}", response_model=CampaignResponse)
+async def update_campaign(
+    campaign_id: UUID,
+    body: CampaignUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if body.target_geo is not None:
+        c.target_geo = body.target_geo
+    if body.target_niches is not None:
+        c.target_niches = body.target_niches
+    if body.ai_config is not None:
+        c.ai_config = {**c.ai_config, **body.ai_config}
+    
+    await _append_log(c, db, "info", "Campaign parameters updated on-the-fly.")
+    await db.commit()
+    await db.refresh(c)
+    return c
+
 @router.get("/{campaign_id}/status")
 async def get_campaign_status(
     campaign_id: UUID,
@@ -99,3 +124,62 @@ async def start_campaign_task(
 
     task = run_campaign_scraping.delay(str(c.id))
     return {"message": "Campaign pipeline launched", "task_id": task.id, "campaign_id": c.id}
+
+async def _append_log(campaign, db, level: str, msg: str):
+    from datetime import datetime
+    log_entry = {"level": level, "message": msg, "timestamp": datetime.utcnow().isoformat() + "Z"}
+    new_logs = list(campaign.logs) if campaign.logs else []
+    new_logs.append(log_entry)
+    campaign.logs = new_logs
+    await db.commit()
+
+@router.post("/{campaign_id}/pause")
+async def pause_campaign(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if c.status == CampaignStatus.RUNNING:
+        c.status = CampaignStatus.PAUSED
+        await _append_log(c, db, "warning", "Campaign paused by operator.")
+    return {"status": c.status}
+
+@router.post("/{campaign_id}/resume")
+async def resume_campaign(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if c.status == CampaignStatus.PAUSED:
+        c.status = CampaignStatus.RUNNING
+        await _append_log(c, db, "info", "Campaign resumed by operator.")
+    return {"status": c.status}
+
+@router.post("/{campaign_id}/stop")
+async def stop_campaign(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if c.status in [CampaignStatus.RUNNING, CampaignStatus.PAUSED, CampaignStatus.PENDING]:
+        c.status = CampaignStatus.CANCELLED
+        await _append_log(c, db, "error", "Campaign emergency stopped by operator.")
+    return {"status": c.status}
