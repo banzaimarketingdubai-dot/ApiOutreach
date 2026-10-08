@@ -1,0 +1,67 @@
+import React from 'react';
+import { Bot, Sparkles, Database, Layers, ArrowUpRight } from 'lucide-react';
+
+export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) {
+  return (
+    <header className="border-b border-slate-800 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        {/* Brand */}
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20">
+            <Database className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                REVO <span className="text-blue-500 font-light">MASTER DATA</span>
+              </span>
+              <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                v1.0 SoT
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">AI-Driven Lead Generation & Enrichment Engine</p>
+          </div>
+        </div>
+
+        {/* Tabs & Actions */}
+        <div className="flex items-center space-x-4">
+          <nav className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setActiveTab('leads')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'leads'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Master Data</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('builder')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'builder'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Campaign Builder</span>
+            </button>
+          </nav>
+
+          <button
+            onClick={onOpenAIStrategist}
+            className="group relative inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-lg shadow-indigo-500/25 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+            <span>AI Strategist Co-pilot</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+  );
+}

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BanzAI Revo — Панель управления и CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h2>BanzAI Revo</h2>
+        <span>Outreach & CRM Portal</span>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+        <span class="nav-icon">📊</span> Дашборд и Аналитика
+      </a>
+      <a href="#crm" class="nav-item" data-tab="crm">
+        <span class="nav-icon">👥</span> База Лидов (CRM)
+      </a>
+      <a href="#console" class="nav-item" data-tab="console">
+        <span class="nav-icon">💻</span> Терминал Процессов
+      </a>
+      <a href="#queue" class="nav-item" data-tab="queue">
+        <span class="nav-icon">🛡️</span> Очередь Anti-Spam (24h)
+      </a>
+    </nav>
+
+    <div class="system-status">
+      <div class="status-indicator online"></div>
+      <div class="status-info">
+        <span class="status-title">Система активна</span>
+        <span class="status-sub" id="server-clock">Синхронизация...</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- Top Header Bar -->
+    <header class="top-header">
+      <div class="header-title">
+        <h1 id="page-title">Аналитика и Мониторинг</h1>
+        <p>Управление сбором, аудитом и мультиканальной рассылкой лидов</p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="refreshAllData()">
+          🔄 Обновить данные
+        </button>
+        <a href="https://docs.google.com/spreadsheets/d/1W7tz2Z5mBHelfppBg94YzfhGv93JSts9eknuj2WiGvk/edit#gid=659263283" target="_blank" class="btn btn-primary">
+          📊 Открыть Google Таблицу
+        </a>
+      </div>
+    </header>
+
+    <!-- Tab 1: Dashboard Analytics -->
+    <section id="tab-dashboard" class="tab-content active">
+      
+      <!-- KPI Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card glass">
+          <div class="kpi-icon blue">📍</div>
+          <div class="kpi-data">
+            <span class="kpi-label">Собрано Лидов</span>
+            <h3 id="stat-total-leads">0</h3>
+            <span class="kpi-sub">Киев, Дубай и регионы</span>
+          </div>
+        </div>
+
+        <div class="kpi-card glass">
+          <div class="kpi-icon purple">📧</div>
+          <div class="kpi-data">
+            <span class="kpi-label">Email Покрытие</span>
+            <h3 id="stat-email-pct">0%</h3>
+            <span class="kpi-sub" id="stat-email-count">0 имейлов найдено</span>
+          </div>
+        </div>
+
+        <div class="kpi-card glass">
+          <div class="kpi-icon green">💬</div>
+          <div class="kpi-data">
+            <span class="kpi-label">Доступ в Мессенджерах</span>
+            <h3 id="stat-messenger-pct">0%</h3>
+            <span class="kpi-sub" id="stat-messenger-count">WhatsApp / Viber / TG</span>
+          </div>
+        </div>
+
+        <div class="kpi-card glass">
+          <div class="kpi-icon orange">🛡️</div>
+          <div class="kpi-data">
+            <span class="kpi-label">Очередь Anti-Spam 24h</span>
+            <h3 id="stat-queue-count">0</h3>
+            <span class="kpi-sub">Защита от дубликатов</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Campaign Controls -->
+      <div class="section-card glass">
+        <h3>🚀 Быстрое управление кампаниями в 1 клик</h3>
+        <p class="section-desc">Запускайте фоновые процессы парсинга, обогащения и отправки сообщений:</p>
+        
+        <div class="action-buttons">
+          <button class="btn btn-action green-gradient" onclick="triggerAction('run_enrichment')">
+            <span class="btn-icon">🔍</span>
+            <div class="btn-text">
+              <strong>Запустить Обогащение Контактов</strong>
+              <span>Глубокий поиск имейлов и мессенджеров на сайтах</span>
+            </div>
+          </button>
+
+          <button class="btn btn-action blue-gradient" onclick="triggerAction('upload_sheets')">
+            <span class="btn-icon">📊</span>
+            <div class="btn-text">
+              <strong>Синхронизировать Google Sheets</strong>
+              <span>Выгрузка Revo_Kyiv со ссылками на мессенджеры</span>
+            </div>
+          </button>
+
+          <button class="btn btn-action purple-gradient" onclick="triggerAction('run_userbot')">
+            <span class="btn-icon">🤖</span>
+            <div class="btn-text">
+              <strong>Запустить Telegram Userbot</strong>
+              <span>Персональная 1-в-1 рассылка от имени пользователя</span>
+            </div>
+          </button>
+
+          <button class="btn btn-action pink-gradient" onclick="triggerAction('run_viber')">
+            <span class="btn-icon">📲</span>
+            <div class="btn-text">
+              <strong>Запустить Viber Outreach</strong>
+              <span>Прямой аутрич по мобильным номерам в Viber</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Terminal Console Mini -->
+      <div class="section-card glass">
+        <div class="card-header-flex">
+          <h3>💻 Логи процессов в реальном времени</h3>
+          <span class="live-badge">LIVE</span>
+        </div>
+        <div class="terminal-box" id="mini-terminal">
+          <div class="log-line text-muted">Загрузка логов вывода...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Lead CRM Table -->
+    <section id="tab-crm" class="tab-content">
+      <div class="section-card glass">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="crm-search" placeholder="Поиск по названию, категории или адресу..." oninput="debounceSearch()">
+          </div>
+
+          <div class="toolbar-stats">
+            Найдено записей: <strong id="crm-count">0</strong>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Категория</th>
+                <th>Название компании</th>
+                <th>Контакты</th>
+                <th>Прямая связь в 1 клик</th>
+                <th>Оценка Revo</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="crm-table-body">
+              <tr>
+                <td colspan="7" class="text-center py-4">Загрузка базы лидов...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Full Terminal Log -->
+    <section id="tab-console" class="tab-content">
+      <div class="section-card glass">
+        <div class="card-header-flex">
+          <h3>💻 Полноэкранный консольный монитор процессов</h3>
+          <button class="btn btn-secondary btn-sm" onclick="fetchLogs()">🔄 Обновить логи</button>
+        </div>
+        <div class="terminal-box full-height" id="full-terminal">
+          <div class="log-line text-muted">Ожидание сообщений процессов...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Anti-Spam Queue -->
+    <section id="tab-queue" class="tab-content">
+      <div class="section-card glass">
+        <h3>🛡️ Очередь защиты от дубликатов (Anti-Spam 24h Guard)</h3>
+        <p class="section-desc">Письма для клиник с одинаковыми имейлами автоматически распределены с паузой 24–30 часов:</p>
+
+        <div class="queue-list" id="queue-container">
+          <div class="text-muted py-3">Очередь отложенных писем пуста.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

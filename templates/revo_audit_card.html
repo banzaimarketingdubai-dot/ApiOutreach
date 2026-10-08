@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Revo Audit Report Card</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    body {
+      background: #090D16;
+      color: #F8FAFC;
+      width: 1200px;
+      height: 800px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 30px;
+      overflow: hidden;
+    }
+
+    .audit-card {
+      width: 1140px;
+      height: 740px;
+      background: linear-gradient(145deg, #111827 0%, #0F172A 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .audit-card::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 24px;
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #F8FAFC;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    .meta-badge {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 20px;
+      border-radius: 12px;
+      text-align: right;
+    }
+
+    .meta-company {
+      font-size: 18px;
+      font-weight: 700;
+      color: #38BDF8;
+    }
+
+    .meta-type {
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    /* MAIN CONTENT */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 36px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* SCORE CONTAINER */
+    .score-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-circle {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, {{status_color}} {{overall_score}}%, rgba(255,255,255,0.08) {{overall_score}}%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .score-inner {
+      width: 130px;
+      height: 130px;
+      background: #0F172A;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-num {
+      font-size: 46px;
+      font-weight: 900;
+      color: #FFF;
+      line-height: 1;
+    }
+
+    .score-max {
+      font-size: 14px;
+      color: #64748B;
+      font-weight: 600;
+    }
+
+    .score-status {
+      font-size: 15px;
+      font-weight: 700;
+      color: {{status_color}};
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* METRICS SECTION */
+    .metrics-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .metric-title {
+      color: #E2E8F0;
+    }
+
+    .metric-val {
+      color: #38BDF8;
+      font-weight: 700;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #6366F1 0%, #38BDF8 100%);
+    }
+
+    /* BOTTLENECK & HIGHLIGHTS */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 10px;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .info-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94A3B8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bottleneck-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bottleneck-item {
+      font-size: 13px;
+      color: #CBD5E1;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .bottleneck-item::before {
+      content: '⚠️';
+      font-size: 12px;
+    }
+
+    .stat-highlight {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: 100%;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 32px;
+      font-weight: 800;
+      color: #10B981;
+      line-height: 1.1;
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-top: 4px;
+    }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="audit-card">
+    
+    <!-- HEADER -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo">R</div>
+        <div>
+          <div class="brand-title">REVO AUDIT ENGINE</div>
+          <div class="brand-subtitle">Аналитика доминирования на Google Картах</div>
+        </div>
+      </div>
+      <div class="meta-badge">
+        <div class="meta-company">{{company_name}}</div>
+        <div class="meta-type">{{business_type}} • Google Maps Diagnostic</div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="content-grid">
+      <!-- SCORE BOX -->
+      <div class="score-box">
+        <div class="score-circle">
+          <div class="score-inner">
+            <div class="score-num">{{overall_score}}</div>
+            <div class="score-max">из 100</div>
+          </div>
+        </div>
+        <div class="score-status">{{status_label}}</div>
+      </div>
+
+      <!-- METRICS -->
+      <div class="metrics-section">
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-title">Репутация & 5★ Отзывы</span>
+            <span class="metric-val">{{reputation_score}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{reputation_score}}%;"></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-title">Полнота профиля Google Карт</span>
+            <span class="metric-val">{{completeness_score}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{completeness_score}}%;"></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-title">Видимость в локальном поиске</span>
+            <span class="metric-val">{{visibility_score}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{visibility_score}}%;"></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-title">Система удержания & Retention Rate</span>
+            <span class="metric-val">{{retention_score}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{retention_score}}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM GRID -->
+    <div class="bottom-grid">
+      <div class="info-card">
+        <div class="info-card-title">Узкие места и точки потери клиентов</div>
+        <ul class="bottleneck-list">
+          {% for item in bottlenecks %}
+          <li class="bottleneck-item">{{item}}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card-title">Потенциал роста с Revo</div>
+        <div class="stat-highlight">
+          <div>
+            <div class="stat-val">-{{potential_loss_pct}}</div>
+            <div class="stat-lbl">Упускаемая выручка сейчас</div>
+          </div>
+          <div>
+            <div class="stat-val">{{growth_factor}}</div>
+            <div class="stat-lbl">Прогноз роста клиентов</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div>Отчёт сформирован автоматически аналитическим комплексом Revo Marketing</div>
+      <div>https://revo.marketing</div>
+    </div>
+
+  </div>
+</body>
+</html>

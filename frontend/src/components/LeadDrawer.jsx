@@ -1,0 +1,141 @@
+import React from 'react';
+import { X, ExternalLink, Star, Phone, Mail, MessageSquare, Globe, ShieldAlert, CheckCircle, Copy } from 'lucide-react';
+
+export default function LeadDrawer({ lead, onClose }) {
+  if (!lead) return null;
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert(`Copied: ${text}`);
+  };
+
+  const phones = (lead.contacts || []).filter(c => c.contact_type === 'phone');
+  const emails = (lead.contacts || []).filter(c => c.contact_type === 'email');
+  const customData = lead.custom_data || {};
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="w-screen max-w-xl bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col">
+          
+          {/* Header */}
+          <div className="p-6 border-b border-slate-800 flex items-start justify-between bg-slate-950/40">
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2 inline-block">
+                Golden Record Card
+              </span>
+              <h2 className="text-xl font-bold text-white tracking-tight">{lead.company_name}</h2>
+              <p className="text-xs text-slate-400 mt-1">{lead.business_type} • {lead.city}</p>
+            </div>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Drawer Body */}
+          <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+            
+            {/* Quick Stats & Links */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                <span className="text-slate-500 text-[10px] block">Revo Lead Score</span>
+                <span className="text-2xl font-extrabold text-amber-400">{lead.revo_score}/100</span>
+              </div>
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                <span className="text-slate-500 text-[10px] block">Google Rating</span>
+                <div className="flex items-center space-x-1 mt-1">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span className="text-lg font-bold text-white">{lead.rating}</span>
+                  <span className="text-slate-500 text-[10px]">({lead.reviews_count} reviews)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Website & Address */}
+            <div className="space-y-2">
+              <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px]">Location & Web</span>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                <p className="text-slate-300"><strong>Address:</strong> {lead.address || 'N/A'}</p>
+                {lead.website && (
+                  <p className="text-slate-300 flex items-center space-x-1">
+                    <strong>Website:</strong>
+                    <a
+                      href={lead.website.startswith && lead.website.startswith('http') ? lead.website : `https://${lead.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline inline-flex items-center ml-1"
+                    >
+                      <span>{lead.website}</span>
+                      <ExternalLink className="w-3 h-3 ml-1" />
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Verified Contacts */}
+            <div className="space-y-2">
+              <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px]">Extracted Contacts</span>
+              <div className="space-y-2">
+                {lead.contacts && lead.contacts.length > 0 ? (
+                  lead.contacts.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="flex items-center space-x-2">
+                        {c.contact_type === 'phone' && <Phone className="w-4 h-4 text-emerald-400" />}
+                        {c.contact_type === 'email' && <Mail className="w-4 h-4 text-blue-400" />}
+                        {c.contact_type === 'whatsapp' && <MessageSquare className="w-4 h-4 text-teal-400" />}
+                        <span className="font-mono text-white text-xs">{c.contact_value}</span>
+                        <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">
+                          {c.source}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(c.contact_value)}
+                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-500 italic">No standard contacts extracted yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Revo Audit Note */}
+            {lead.audit_notes && (
+              <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/20 space-y-1">
+                <span className="font-bold text-amber-400 flex items-center space-x-1.5">
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>Revo Pitch Audit Notes</span>
+                </span>
+                <p className="text-slate-300 leading-relaxed">{lead.audit_notes}</p>
+              </div>
+            )}
+
+            {/* Custom LLM Extracted Data (JSONB) */}
+            <div className="space-y-2">
+              <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px]">Smart LLM Enriched Custom Variables</span>
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] overflow-x-auto text-amber-300">
+                <pre>{JSON.stringify(customData, null, 2)}</pre>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium"
+            >
+              Close Drawer
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

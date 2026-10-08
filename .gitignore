@@ -1,0 +1,36 @@
+# Environment variables
+.env
+.env.local
+
+# Credentials & Sessions
+service_account.json
+credentials.json
+userbot_history.json
+*.session
+*.session-journal
+
+# Dependencies
+node_modules/
+backend/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build outputs
+frontend/dist/
+frontend/node_modules/
+.vite/
+
+# Database / Storage
+postgres_data/
+*.sqlite3
+*.db
+leads.json
+leads.csv
+outreach_log.txt
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+

@@ -1,0 +1,12 @@
+# ============================================================
+# requirements.txt — BanzAI Outreach Combine v1.0
+# ============================================================
+
+# Playwright — headless Chromium для скриншотов
+playwright>=1.44.0
+
+# Загрузка .env переменных
+python-dotenv>=1.0.0
+
+# Стандартные библиотеки Python (не требуют установки):
+# smtplib, email.mime, csv, os, re, time, random, pathlib, logging
