@@ -30,11 +30,14 @@ async def create_campaign(
     await db.commit()
     await db.refresh(campaign)
 
+    import logging
+    logger = logging.getLogger(__name__)
     # Launch Celery background task
     try:
         run_campaign_scraping.delay(str(campaign.id))
+        logger.info(f"Successfully queued celery task for campaign {campaign.id}")
     except Exception as e:
-        # Fallback if Celery redis isn't connected synchronously
+        logger.error(f"Failed to queue celery task: {e}")
         pass
 
     return campaign
