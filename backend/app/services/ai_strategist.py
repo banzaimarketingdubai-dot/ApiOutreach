@@ -50,6 +50,7 @@ Design the optimal scraping campaign & custom variables to extract from company 
         from app.services.vault_helper import get_api_key
         gemini_key = await get_api_key("gemini")
         
+        errors = []
         if gemini_key:
             for model in ["gemini-1.5-pro", "gemini-1.5-flash"]:
                 try:
@@ -57,7 +58,8 @@ Design the optimal scraping campaign & custom variables to extract from company 
                     if result:
                         return result
                 except Exception as e:
-                    logger.warning(f"Gemini API call failed with model {model}: {e}")
+                    errors.append(f"Gemini {model} error: {str(e)}")
+                    logger.error(f"Gemini API call failed with model {model}: {e}")
 
         # Fallback to Grok if available
         if settings.GROK_API_KEY:
@@ -66,7 +68,11 @@ Design the optimal scraping campaign & custom variables to extract from company 
                 if result:
                     return result
             except Exception as e:
-                logger.warning(f"Grok API call failed: {e}")
+                errors.append(f"Grok error: {str(e)}")
+                logger.error(f"Grok API call failed: {e}")
+
+        if gemini_key or settings.GROK_API_KEY:
+            raise Exception("AI Strategist Failed: " + " | ".join(errors))
 
         # Mock / Rule-based Fallback if API keys are missing or failed
         logger.info("Using internal fallback for AI Strategist configuration.")
@@ -90,7 +96,8 @@ Design the optimal scraping campaign & custom variables to extract from company 
                 data = resp.json()
                 text = data["candidates"][0]["content"]["parts"][0]["text"]
                 return json.loads(text)
-        return None
+            else:
+                raise Exception(f"HTTP {resp.status_code}: {resp.text}")
 
     @staticmethod
     async def _call_grok_api(api_key: str, prompt: str) -> Dict[str, Any]:
@@ -111,7 +118,8 @@ Design the optimal scraping campaign & custom variables to extract from company 
                 # Clean Markdown backticks if present
                 clean_text = text.replace("```json", "").replace("```", "").strip()
                 return json.loads(clean_text)
-        return None
+            else:
+                raise Exception(f"HTTP {resp.status_code}: {resp.text}")
 
     @staticmethod
     def _generate_smart_mock_config(user_goal: str, geo: str) -> Dict[str, Any]:
