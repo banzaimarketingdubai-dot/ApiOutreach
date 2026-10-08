@@ -4,7 +4,11 @@ from app.core.config import settings
 celery_app = Celery(
     "revo_tasks",
     broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL
+    backend=settings.REDIS_URL,
+    include=[
+        "app.workers.scraping_tasks",
+        "app.workers.enrichment_tasks"
+    ]
 )
 
 celery_app.conf.update(
