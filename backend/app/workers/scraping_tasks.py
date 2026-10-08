@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from datetime import datetime
 from typing import List, Dict, Any
 from apify_client import ApifyClient
 from celery_app import celery_app
@@ -34,6 +35,15 @@ def run_campaign_scraping(self, campaign_id: str):
             campaign.status = CampaignStatus.RUNNING
             await db.commit()
 
+            async def add_log(level: str, msg: str):
+                log_entry = {"level": level, "message": msg, "timestamp": datetime.utcnow().isoformat() + "Z"}
+                new_logs = list(campaign.logs) if campaign.logs else []
+                new_logs.append(log_entry)
+                campaign.logs = new_logs
+                await db.commit()
+
+            await add_log("info", f"Started scraping for {len(ai_cfg.get('search_queries', []))} queries.")
+
             ai_cfg = campaign.ai_config or {}
             queries = ai_cfg.get("search_queries", [f"Dental Clinic in {campaign.target_geo or 'Dubai'}"])
             max_places = ai_cfg.get("max_places", 50)
@@ -52,11 +62,14 @@ def run_campaign_scraping(self, campaign_id: str):
                     run_res = client.actor(ACTOR_ID).call(run_input=run_input)
                     dataset_id = run_res.get("defaultDatasetId") if isinstance(run_res, dict) else getattr(run_res, "default_dataset_id", None)
                     if dataset_id:
+                        await add_log("info", f"Apify Actor finished. Dataset ID: {dataset_id}")
                         for item in client.dataset(dataset_id).iterate_items():
                             scraped_items.append(item)
+                        await add_log("success", f"Downloaded {len(scraped_items)} raw items from Apify.")
                 except Exception as e:
                     logger.error(f"Apify call failed: {e}")
                     campaign.error_log = f"Apify error: {str(e)}"
+                    await add_log("error", f"Apify integration failed: {e}")
 
             # If no Apify token or 0 items returned, use fallback mock scraped items for testing/demo
             if not scraped_items:
@@ -84,6 +97,7 @@ def run_campaign_scraping(self, campaign_id: str):
                         "location": {"lat": 25.0772, "lng": 55.1344}
                     }
                 ]
+                await add_log("warning", f"Apify token missing or 0 items. Injected {len(scraped_items)} mock items for demo.")
 
             merger = LeadMergerService(db)
             saved_count = 0
@@ -140,6 +154,7 @@ def run_campaign_scraping(self, campaign_id: str):
                 "merged_leads": merged_count
             }
             campaign.status = CampaignStatus.COMPLETED
+            await add_log("success", f"Scraping completed. Added {saved_count} new leads, merged {merged_count}.")
             await db.commit()
 
             # Trigger Enrichment task for leads with website

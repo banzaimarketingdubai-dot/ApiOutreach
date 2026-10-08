@@ -1,5 +1,5 @@
 """
-test_ui_e2e.py — Автономное E2E тестирования кликов, форм и ответов на Vercel UI
+test_ui_e2e.py — Автономное E2E тестирование кликов, форм и ответов на Vercel UI
 """
 
 import os
@@ -47,31 +47,46 @@ async def test_ui_suite(url=VERCEL_UI_URL):
             await browser.close()
             return False
 
-        # 2. Test Quick Task Builder Form Submission (Button Click & API response check)
+        # 2. Switch to 'Campaign Builder' Tab
+        try:
+            builder_tab = page.get_by_text("Campaign Builder")
+            if await builder_tab.is_visible():
+                await builder_tab.click()
+                await asyncio.sleep(1)
+                print(f"  ✅ [UI Nav] Switched to 'Campaign Builder' Tab")
+            else:
+                print(f"  ⚠️ [UI Nav] 'Campaign Builder' tab button not found")
+        except Exception as e:
+            print(f"  ❌ [UI Nav] Failed switching tabs: {e}")
+            passed = False
+
+        # 3. Test Quick Task Builder Form Submission (Button Click & API response check)
         try:
             launch_btn = page.get_by_role("button", name="Launch Direct Task")
             if await launch_btn.is_visible():
+                alert_messages.clear()
                 await launch_btn.click()
-                await asyncio.sleep(3)
+                await asyncio.sleep(4)
                 
                 # Check captured alert popups
                 has_error_alert = any("Error" in msg or "Failed" in msg for msg in alert_messages)
                 has_success_alert = any("Pipeline task submitted" in msg for msg in alert_messages)
                 
                 if has_error_alert:
-                    print(f"  ❌ [UI Form Submit] Quick Task Builder Error Popup: {alert_messages}")
+                    print(f"  ❌ [UI Form Submit] Quick Task Builder Alert ERROR: {alert_messages}")
                     passed = False
                 elif has_success_alert:
-                    print(f"  ✅ [UI Form Submit] Quick Task Builder Success -> '{alert_messages[-1]}'")
+                    print(f"  ✅ [UI Form Submit] Quick Task Builder SUCCESS -> Alert: '{alert_messages[-1]}'")
                 else:
-                    print(f"  ✅ [UI Form Submit] Quick Task Builder Clicked (Alerts: {alert_messages})")
+                    print(f"  ✅ [UI Form Submit] Quick Task Builder Clicked & Processed (Alerts: {alert_messages})")
             else:
-                print(f"  ⚠️ [UI Form Submit] 'Launch Direct Task' button not visible")
+                print(f"  ❌ [UI Form Submit] 'Launch Direct Task' button not visible after switching tab")
+                passed = False
         except Exception as e:
             print(f"  ❌ [UI Form Submit] Error testing Quick Task Builder: {e}")
             passed = False
 
-        # 3. Test AI Strategist Co-pilot Modal & Strategy Generation
+        # 4. Test AI Strategist Co-pilot Modal & Strategy Generation
         try:
             ai_nav_btn = page.get_by_text("AI Strategist Co-pilot")
             if await ai_nav_btn.is_visible():
@@ -87,10 +102,10 @@ async def test_ui_suite(url=VERCEL_UI_URL):
                     
                     has_error_alert = any("Error" in msg or "Failed" in msg for msg in alert_messages)
                     if has_error_alert:
-                        print(f"  ❌ [UI AI Modal] AI Strategy Generation Alert Error: {alert_messages}")
+                        print(f"  ❌ [UI AI Modal] AI Strategy Generation Alert ERROR: {alert_messages}")
                         passed = False
                     else:
-                        print(f"  ✅ [UI AI Modal] AI Strategy Modal Button Clicked & Processed")
+                        print(f"  ✅ [UI AI Modal] AI Strategy Modal Form Clicked & Generated Strategy!")
                 else:
                     print(f"  ✅ [UI AI Modal] AI Strategist Modal Opened")
             else:

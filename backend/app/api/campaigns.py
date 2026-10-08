@@ -61,6 +61,27 @@ async def get_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
     return c
 
+@router.get("/{campaign_id}/status")
+async def get_campaign_status(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign.status, Campaign.stats, Campaign.logs).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    row = res.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Return only the last 20 logs for the live feed
+    logs = row.logs if row.logs else []
+    
+    return {
+        "status": row.status,
+        "stats": row.stats or {},
+        "logs": logs[-20:]
+    }
+
 @router.post("/{campaign_id}/start")
 async def start_campaign_task(
     campaign_id: UUID,

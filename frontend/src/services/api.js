@@ -42,6 +42,12 @@ export async function fetchCampaigns() {
   return res.json();
 }
 
+export async function getCampaignStatus(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/status`);
+  if (!res.ok) throw new Error('Failed to fetch campaign status');
+  return res.json();
+}
+
 export async function fetchApifyBalance() {
   const res = await fetch(`${API_BASE}/apify/balance`);
   if (!res.ok) throw new Error('Failed to fetch Apify balance');

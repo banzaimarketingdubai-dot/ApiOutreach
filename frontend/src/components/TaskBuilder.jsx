@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Sparkles, Server, CheckCircle2, Clock } from 'lucide-react';
 import { createCampaign } from '../services/api';
+import CampaignControlPanel from './CampaignControlPanel';
 
 export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, campaigns = [] }) {
   const [campaignName, setCampaignName] = useState('Manual Dental Clinic Scraping');
@@ -8,6 +9,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
   const [niche, setNiche] = useState('Dental Clinics');
   const [query, setQuery] = useState('Dental Clinic in Dubai');
   const [submitting, setSubmitting] = useState(false);
+  const [activeCampaignId, setActiveCampaignId] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,53 +125,68 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
         </div>
       </div>
 
-      {/* Right: Active Campaigns & Task Logs Table */}
-      <div className="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md">
-        <h3 className="font-bold text-base text-white mb-4 flex items-center space-x-2">
-          <Clock className="w-4 h-4 text-purple-400" />
-          <span>Active Pipeline Runs & Celery History</span>
-        </h3>
+      {/* Right: Active Campaigns & Task Logs Table OR Live Control Panel */}
+      <div className="lg:col-span-2">
+        {activeCampaignId ? (
+          <CampaignControlPanel 
+            campaignId={activeCampaignId} 
+            onClose={() => setActiveCampaignId(null)} 
+          />
+        ) : (
+          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md h-full">
+            <h3 className="font-bold text-base text-white mb-4 flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-purple-400" />
+              <span>Active Pipeline Runs & Celery History</span>
+            </h3>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-semibold">
-                <th className="py-2.5 px-3">Campaign Name</th>
-                <th className="py-2.5 px-3">GEO / Niche</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">Stats</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {campaigns.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="py-8 text-center text-slate-500">
-                    No active campaign runs yet. Use Quick Task Builder or AI Strategist to start.
-                  </td>
-                </tr>
-              ) : (
-                campaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/40">
-                    <td className="py-3 px-3 font-semibold text-white">{c.campaign_name}</td>
-                    <td className="py-3 px-3 text-slate-300">{c.target_geo} / {c.target_niches?.join(', ')}</td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        c.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        c.status === 'RUNNING' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse' :
-                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
-                      {c.stats ? `Scraped: ${c.stats.total_scraped || 0} | New: ${c.stats.new_leads_created || 0}` : 'In Queue'}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-semibold">
+                    <th className="py-2.5 px-3">Campaign Name</th>
+                    <th className="py-2.5 px-3">GEO / Niche</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3">Stats</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {campaigns.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="py-8 text-center text-slate-500">
+                        No active campaign runs yet. Use Quick Task Builder or AI Strategist to start.
+                      </td>
+                    </tr>
+                  ) : (
+                    campaigns.map((c) => (
+                      <tr 
+                        key={c.id} 
+                        className="hover:bg-slate-800/40 cursor-pointer transition-colors group"
+                        onClick={() => setActiveCampaignId(c.id)}
+                      >
+                        <td className="py-3 px-3 font-semibold text-white group-hover:text-blue-400 transition-colors">
+                          {c.campaign_name}
+                        </td>
+                        <td className="py-3 px-3 text-slate-300">{c.target_geo} / {c.target_niches?.join(', ')}</td>
+                        <td className="py-3 px-3">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            c.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            c.status === 'RUNNING' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {c.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
+                          {c.stats ? `Scraped: ${c.stats.total_scraped || 0} | New: ${c.stats.new_leads_created || 0}` : 'In Queue'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
