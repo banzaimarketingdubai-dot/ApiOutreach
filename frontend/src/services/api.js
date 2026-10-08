@@ -13,7 +13,10 @@ export async function generateAIStrategy(user_goal, geo, additional_notes) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_goal, geo, additional_notes })
   });
-  if (!res.ok) throw new Error('AI Strategy generation failed');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'AI Strategy generation failed');
+  }
   return res.json();
 }
 
@@ -23,7 +26,10 @@ export async function createCampaign(campaignData) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(campaignData)
   });
-  if (!res.ok) throw new Error('Failed to launch campaign');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to launch campaign');
+  }
   return res.json();
 }
 
