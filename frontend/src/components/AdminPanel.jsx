@@ -123,11 +123,15 @@ export default function AdminPanel() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Configured Integrations</h3>
             <div className="space-y-2">
-              {vaultKeys.length === 0 ? <p className="text-slate-500 text-sm">No keys configured in DB.</p> : vaultKeys.map(k => (
+              {vaultKeys.length === 0 ? <p className="text-slate-500 text-sm">No keys configured in DB or .env.</p> : vaultKeys.map(k => (
                 <div key={k.provider} className="flex justify-between items-center bg-slate-950 border border-slate-800 px-4 py-3 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
-                    <span className="text-slate-200 font-bold capitalize">{k.provider}</span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                      <span className="text-slate-200 font-bold capitalize">{k.provider}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider ${k.source === 'Vault' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-slate-700/50 text-slate-400 border border-slate-700'}`}>{k.source}</span>
+                    </div>
+                    {k.masked && <span className="text-slate-500 font-mono text-[10px] pl-5">{k.masked}</span>}
                   </div>
                   <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-wider">Active</span>
                 </div>

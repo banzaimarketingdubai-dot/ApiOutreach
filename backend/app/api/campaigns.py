@@ -244,3 +244,19 @@ async def recalculate_score(
     await _append_log(c, db, "success", f"Mass recalculated scores for {len(leads)} leads.")
     await db.commit()
     return {"message": "Scores recalculated", "updated_leads": len(leads)}
+
+@router.delete("/{campaign_id}")
+async def delete_campaign(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+        
+    await db.delete(c)
+    await db.commit()
+    return {"message": "Campaign deleted successfully"}

@@ -58,6 +58,12 @@ export async function updateCampaign(id, data) {
   return res.json();
 }
 
+export async function deleteCampaign(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete campaign');
+  return res.json();
+}
+
 export async function retryFailed(id) {
   const res = await fetch(`${API_BASE}/campaigns/${id}/retry-failed`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to retry');

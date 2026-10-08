@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Play, Sparkles, Server, CheckCircle2, Clock } from 'lucide-react';
-import { createCampaign } from '../services/api';
+import { Play, Sparkles, Server, CheckCircle2, Clock, Trash } from 'lucide-react';
+import { createCampaign, deleteCampaign } from '../services/api';
 import CampaignControlPanel from './CampaignControlPanel';
 
 export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, campaigns = [] }) {
@@ -42,6 +42,17 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
       alert('Error creating campaign: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this campaign?")) return;
+    try {
+      await deleteCampaign(id);
+      if (onCampaignCreated) onCampaignCreated(); // Refresh list
+    } catch (err) {
+      alert("Failed to delete: " + err.message);
     }
   };
 
@@ -147,12 +158,13 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                     <th className="py-2.5 px-3">GEO / Niche</th>
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3">Stats</th>
+                    <th className="py-2.5 px-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {campaigns.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="py-8 text-center text-slate-500">
+                      <td colSpan="5" className="py-8 text-center text-slate-500">
                         No active campaign runs yet. Use Quick Task Builder or AI Strategist to start.
                       </td>
                     </tr>
@@ -178,6 +190,15 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                         </td>
                         <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
                           {c.stats ? `Scraped: ${c.stats.total_scraped || 0} | New: ${c.stats.new_leads_created || 0}` : 'In Queue'}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <button 
+                            onClick={(e) => handleDelete(e, c.id)}
+                            className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-500 hover:text-red-400 transition"
+                            title="Delete Campaign"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))
