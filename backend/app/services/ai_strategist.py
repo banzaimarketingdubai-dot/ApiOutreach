@@ -46,17 +46,17 @@ Design the optimal scraping campaign & custom variables to extract from company 
         """
 
         # Attempt calling Gemini API first, then Grok as fallback or alternative
-        gemini_keys = [k for k in [settings.GEMINI_API_KEY] + settings.GEMINI_API_KEYS if k]
+        from app.services.vault_helper import get_api_key
+        gemini_key = await get_api_key("gemini")
         
-        if gemini_keys:
-            for key in gemini_keys:
-                for model in ["gemini-1.5-pro", "gemini-1.5-flash"]:
-                    try:
-                        result = await AIStrategistService._call_gemini_api(key, model, prompt)
-                        if result:
-                            return result
-                    except Exception as e:
-                        logger.warning(f"Gemini API call failed with model {model}: {e}")
+        if gemini_key:
+            for model in ["gemini-1.5-pro", "gemini-1.5-flash"]:
+                try:
+                    result = await AIStrategistService._call_gemini_api(gemini_key, model, prompt)
+                    if result:
+                        return result
+                except Exception as e:
+                    logger.warning(f"Gemini API call failed with model {model}: {e}")
 
         # Fallback to Grok if available
         if settings.GROK_API_KEY:

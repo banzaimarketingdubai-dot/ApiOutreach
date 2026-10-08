@@ -76,16 +76,16 @@ Example Output:
         full_prompt = sys_prompt + "\n\n" + "\n".join(prompt_data)
 
         # Call Gemini or Grok
-        gemini_keys = [k for k in [settings.GEMINI_API_KEY] + settings.GEMINI_API_KEYS if k]
-        if gemini_keys:
-            for key in gemini_keys:
-                for model in ["gemini-1.5-flash", "gemini-1.5-pro"]:
-                    try:
-                        res = await AIEnrichmentService._call_gemini_batch(key, model, full_prompt)
-                        if res:
-                            return res
-                    except Exception as e:
-                        logger.warning(f"Batch enrichment Gemini call failed: {e}")
+        from app.services.vault_helper import get_api_key
+        gemini_key = await get_api_key("gemini")
+        if gemini_key:
+            for model in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+                try:
+                    res = await AIEnrichmentService._call_gemini_batch(gemini_key, model, full_prompt)
+                    if res:
+                        return res
+                except Exception as e:
+                    logger.warning(f"Batch enrichment Gemini call failed: {e}")
 
         # Fallback to local heuristic extraction if API fails
         logger.info("Using heuristic fallback for site batch enrichment.")
@@ -127,12 +127,13 @@ Example Output:
         """
         Takes a prompt template containing {{variables}} and generates emails using Gemini for a batch of leads.
         """
-        gemini_keys = [k for k in [settings.GEMINI_API_KEY] + settings.GEMINI_API_KEYS if k]
-        if not gemini_keys:
+        from app.services.vault_helper import get_api_key
+        api_key = await get_api_key("gemini")
+        
+        if not api_key:
             return [f"[Mock generated email based on '{prompt_template}']\nHello {l.get('company_name')}, we see you are in {l.get('city')}..." for l in leads_data]
 
         results = []
-        api_key = gemini_keys[0]
         model = "gemini-1.5-flash"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 

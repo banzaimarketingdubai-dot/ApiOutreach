@@ -48,7 +48,8 @@ def run_campaign_scraping(self, campaign_id: str):
             queries = ai_cfg.get("search_queries", [f"Dental Clinic in {campaign.target_geo or 'Dubai'}"])
             max_places = ai_cfg.get("max_places", 50)
 
-            api_token = settings.APIFY_API_TOKEN or os.getenv("APIFY_API_TOKEN")
+            from app.services.vault_helper import get_api_key
+            api_token = await get_api_key("apify")
             scraped_items = []
 
             if api_token:
@@ -85,33 +86,9 @@ def run_campaign_scraping(self, campaign_id: str):
                     campaign.error_log = f"Apify error: {str(e)}"
                     await add_log("error", f"Apify integration failed: {e}")
 
-            # If no Apify token or 0 items returned, use fallback mock scraped items for testing/demo
             if not scraped_items:
-                logger.info("Using demonstration/mock items for pipeline validation.")
-                geo = campaign.target_geo or "Dubai"
-                scraped_items = [
-                    {
-                        "title": f"Apex Dental Clinic {geo}",
-                        "categoryName": "Dental Clinic",
-                        "address": f"Financial Center Rd, {geo}",
-                        "phone": "+97145550199",
-                        "website": "https://apexdentaldubai.com",
-                        "totalScore": 3.8,
-                        "reviewsCount": 14,
-                        "location": {"lat": 25.1972, "lng": 55.2744}
-                    },
-                    {
-                        "title": f"Royal Barbershop {geo}",
-                        "categoryName": "Barbershop",
-                        "address": f"Marina Walk, {geo}",
-                        "phone": "+971501234567",
-                        "website": "https://royalbarber.ae",
-                        "totalScore": 4.9,
-                        "reviewsCount": 120,
-                        "location": {"lat": 25.0772, "lng": 55.1344}
-                    }
-                ]
-                await add_log("warning", f"Apify token missing or 0 items. Injected {len(scraped_items)} mock items for demo.")
+                logger.warning(f"Apify returned 0 items for campaign {campaign_id}.")
+                await add_log("warning", f"Apify returned 0 items. No data scraped.")
 
             merger = LeadMergerService(db)
             saved_count = 0

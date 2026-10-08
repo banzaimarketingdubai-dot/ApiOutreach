@@ -8,13 +8,25 @@ export default function CRMExportModal({ leads = [], onClose }) {
   // Take only first 10 for validation
   const validationSet = leads.slice(0, 10);
 
-  const handlePush = () => {
+  const handlePush = async () => {
     setLoading(true);
-    // Mock API call to CRM
-    setTimeout(() => {
+    try {
+      const { fetchWithAuth } = await import('../services/api');
+      const payload = { lead_ids: leads.map(l => l.id) };
+      const res = await fetchWithAuth('/api/v1/export/hubspot', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 'success') {
+        setSuccess(true);
+      } else {
+        alert("Failed to export: " + (res.detail || "Unknown error"));
+      }
+    } catch (e) {
+      alert("Error exporting to CRM: " + e.message);
+    } finally {
       setLoading(false);
-      setSuccess(true);
-    }, 2000);
+    }
   };
 
   if (success) {
