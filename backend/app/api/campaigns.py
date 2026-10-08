@@ -136,7 +136,7 @@ async def _append_log(campaign, db, level: str, msg: str):
     campaign.logs = new_logs
     await db.commit()
 
-@router.post("/{campaign_id}/pause")
+@router.post("/{campaign_id}/suspend")
 async def pause_campaign(
     campaign_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -170,7 +170,7 @@ async def resume_campaign(
         await _append_log(c, db, "info", "Campaign resumed by operator.")
     return {"status": c.status}
 
-@router.post("/{campaign_id}/stop")
+@router.post("/{campaign_id}/halt")
 async def stop_campaign(
     campaign_id: UUID,
     db: AsyncSession = Depends(get_db),

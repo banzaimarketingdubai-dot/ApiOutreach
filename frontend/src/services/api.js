@@ -107,7 +107,7 @@ export async function dryRunAI(prompt_template, lead_ids) {
 }
 
 export async function pauseCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/pause`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/campaigns/${id}/suspend`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to pause campaign');
   return res.json();
 }
@@ -119,7 +119,7 @@ export async function resumeCampaign(id) {
 }
 
 export async function stopCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/stop`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/campaigns/${id}/halt`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to stop campaign');
   return res.json();
 }
