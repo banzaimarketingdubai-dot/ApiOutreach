@@ -148,10 +148,14 @@ async def pause_campaign(
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
     
-    if c.status == CampaignStatus.RUNNING:
-        c.status = CampaignStatus.PAUSED
-        await _append_log(c, db, "warning", "Campaign paused by operator.")
-    return {"status": c.status.value}
+    try:
+        if c.status == CampaignStatus.RUNNING:
+            c.status = CampaignStatus.PAUSED
+            await _append_log(c, db, "warning", "Campaign paused by operator.")
+        return {"status": getattr(c.status, "value", c.status)}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 @router.post("/{campaign_id}/resume")
 async def resume_campaign(
