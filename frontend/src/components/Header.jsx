@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2 } from 'lucide-react';
+import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
 export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) {
@@ -71,6 +71,18 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab }) 
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Campaign Builder</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('merge')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'merge'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <GitMerge className="w-3.5 h-3.5" />
+              <span>Merge Center</span>
             </button>
           </nav>
 

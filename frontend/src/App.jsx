@@ -5,6 +5,7 @@ import MasterDataGrid from './components/MasterDataGrid';
 import TaskBuilder from './components/TaskBuilder';
 import AIStrategistModal from './components/AIStrategistModal';
 import LeadDrawer from './components/LeadDrawer';
+import MergeCenter from './components/MergeCenter';
 import { fetchLeads, fetchCampaigns } from './services/api';
 
 export default function App() {
@@ -56,7 +57,7 @@ export default function App() {
         <StatsCards leadsCount={leads.length} campaignsCount={campaigns.length} />
 
         {/* Tab Views */}
-        {activeTab === 'leads' ? (
+        {activeTab === 'leads' && (
           <MasterDataGrid
             leads={leads}
             onSelectLead={(lead) => setSelectedLead(lead)}
@@ -64,12 +65,16 @@ export default function App() {
             setFilters={setFilters}
             onRefresh={loadLeads}
           />
-        ) : (
+        )}
+        {activeTab === 'builder' && (
           <TaskBuilder
             onCampaignCreated={() => { loadCampaigns(); loadLeads(); }}
             onOpenAIStrategist={() => setIsAIModalOpen(true)}
             campaigns={campaigns}
           />
+        )}
+        {activeTab === 'merge' && (
+          <MergeCenter />
         )}
 
       </main>

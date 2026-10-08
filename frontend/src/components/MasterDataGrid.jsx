@@ -1,12 +1,26 @@
-import React from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud } from 'lucide-react';
 import { getExportCsvUrl } from '../services/api';
+import DryRunModal from './DryRunModal';
+import CRMExportModal from './CRMExportModal';
 
 export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh }) {
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
+  const [crmModalOpen, setCrmModalOpen] = useState(false);
 
   const handleExportCSV = () => {
     const url = getExportCsvUrl(filters);
     window.open(url, '_blank');
+  };
+
+  const toggleLeadSelection = (lead, e) => {
+    e.stopPropagation();
+    if (selectedLeads.find(l => l.id === lead.id)) {
+      setSelectedLeads(selectedLeads.filter(l => l.id !== lead.id));
+    } else {
+      setSelectedLeads([...selectedLeads, lead]);
+    }
   };
 
   return (
@@ -29,6 +43,16 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {selectedLeads.length > 0 && (
+            <button
+              onClick={() => setDryRunModalOpen(true)}
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs font-semibold border border-emerald-500/30 transition-all mr-2"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Dry Run AI ({selectedLeads.length})</span>
+            </button>
+          )}
+
           <select
             value={filters.city || ''}
             onChange={(e) => setFilters({ ...filters, city: e.target.value })}
@@ -51,8 +75,17 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
           </select>
 
           <button
+            onClick={() => setCrmModalOpen(true)}
+            disabled={leads.length === 0}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold border border-blue-500 transition-all ml-auto shadow-lg shadow-blue-500/20 disabled:opacity-50"
+          >
+            <Cloud className="w-3.5 h-3.5" />
+            <span>CRM Sync</span>
+          </button>
+
+          <button
             onClick={handleExportCSV}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all ml-auto"
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -65,6 +98,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+              <th className="py-3 px-4 w-10"></th>
               <th className="py-3 px-4">Company Name</th>
               <th className="py-3 px-4">Type / Niche</th>
               <th className="py-3 px-4">GEO / Address</th>
@@ -77,7 +111,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
           <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
             {leads.length === 0 ? (
               <tr>
-                <td colSpan="7" className="py-12 text-center text-slate-500">
+                <td colSpan="8" className="py-12 text-center text-slate-500">
                   No Master Data leads match current filters.
                 </td>
               </tr>
@@ -87,13 +121,22 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                 const phones = (lead.contacts || []).filter(c => c.contact_type === 'phone');
                 const emails = (lead.contacts || []).filter(c => c.contact_type === 'email');
                 const whatsapp = (lead.contacts || []).filter(c => c.contact_type === 'whatsapp');
+                const isSelected = !!selectedLeads.find(l => l.id === lead.id);
 
                 return (
                   <tr
                     key={lead.id}
                     onClick={() => onSelectLead(lead)}
-                    className="hover:bg-slate-800/60 cursor-pointer transition-colors group"
+                    className={`hover:bg-slate-800/60 cursor-pointer transition-colors group ${isSelected ? 'bg-slate-800/40' : ''}`}
                   >
+                    <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={(e) => toggleLeadSelection(lead, e)}
+                        className="rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
+                      />
+                    </td>
                     <td className="py-3.5 px-4 font-bold text-white group-hover:text-blue-400">
                       {lead.company_name}
                       {hasWeb && (
@@ -153,6 +196,20 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
           </tbody>
         </table>
       </div>
+
+      {dryRunModalOpen && (
+        <DryRunModal 
+          selectedLeads={selectedLeads} 
+          onClose={() => setDryRunModalOpen(false)} 
+        />
+      )}
+
+      {crmModalOpen && (
+        <CRMExportModal 
+          leads={leads}
+          onClose={() => setCrmModalOpen(false)}
+        />
+      )}
 
     </div>
   );

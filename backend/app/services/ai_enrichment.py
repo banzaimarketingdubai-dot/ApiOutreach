@@ -121,3 +121,48 @@ Example Output:
                     out[obj["lead_id"]] = obj.get("extracted_data", {})
                 return out
         return None
+
+    @staticmethod
+    async def generate_dry_run_emails(prompt_template: str, leads_data: List[Dict[str, Any]]) -> List[str]:
+        """
+        Takes a prompt template containing {{variables}} and generates emails using Gemini for a batch of leads.
+        """
+        gemini_keys = [k for k in [settings.GEMINI_API_KEY] + settings.GEMINI_API_KEYS if k]
+        if not gemini_keys:
+            return [f"[Mock generated email based on '{prompt_template}']\nHello {l.get('company_name')}, we see you are in {l.get('city')}..." for l in leads_data]
+
+        results = []
+        api_key = gemini_keys[0]
+        model = "gemini-1.5-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            for lead in leads_data:
+                # Substitute variables in prompt
+                prompt = prompt_template
+                for k, v in lead.items():
+                    if v is not None:
+                        prompt = prompt.replace(f"{{{{{k}}}}}", str(v))
+                
+                # If custom_data exists, substitute those too
+                if lead.get("custom_data"):
+                    for k, v in lead["custom_data"].items():
+                        prompt = prompt.replace(f"{{{{{k}}}}}", str(v))
+
+                sys_msg = "You are an expert B2B copywriter. Write the email exactly as requested by the prompt. Output only the email text, no pleasantries."
+                
+                payload = {
+                    "contents": [{"role": "user", "parts": [{"text": sys_msg + "\n\n" + prompt}]}],
+                    "generationConfig": {"temperature": 0.4}
+                }
+                try:
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        results.append(text.strip())
+                    else:
+                        results.append(f"[Error: API returned {resp.status_code}]")
+                except Exception as e:
+                    results.append(f"[Exception: {str(e)}]")
+                    
+        return results

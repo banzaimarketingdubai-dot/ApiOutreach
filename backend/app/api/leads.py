@@ -128,3 +128,67 @@ async def delete_lead(
         raise HTTPException(status_code=404, detail="Lead not found")
     await db.delete(lead)
     await db.commit()
+
+@router.get("/tools/duplicates", response_model=List[List[LeadResponse]])
+async def get_suspected_duplicates(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Simple MVP duplicate detection: Group by first word of company_name in the same city
+    res = await db.execute(select(Lead))
+    all_leads = res.scalars().all()
+    
+    groups = {}
+    for l in all_leads:
+        if not l.company_name: continue
+        key = (l.company_name.lower().split()[0], l.city)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(l)
+    
+    dup_groups = [group for group in groups.values() if len(group) > 1]
+    
+    result = []
+    for g in dup_groups:
+        result.append([LeadResponse.model_validate(l) for l in g])
+        
+    return result
+
+from pydantic import BaseModel
+class MergeRequest(BaseModel):
+    target_lead_id: UUID
+
+@router.post("/{lead_id}/merge")
+async def merge_lead(
+    lead_id: UUID,
+    body: MergeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Source lead (to be deleted)
+    src_res = await db.execute(select(Lead).where(Lead.id == lead_id))
+    src_lead = src_res.scalars().first()
+    
+    # Target lead (to keep)
+    tgt_res = await db.execute(select(Lead).where(Lead.id == body.target_lead_id))
+    tgt_lead = tgt_res.scalars().first()
+    
+    if not src_lead or not tgt_lead:
+        raise HTTPException(status_code=404, detail="Source or Target lead not found")
+        
+    # Merge fields (if target is empty)
+    if not tgt_lead.website and src_lead.website: tgt_lead.website = src_lead.website
+    if not tgt_lead.phone and src_lead.phone: tgt_lead.phone = src_lead.phone
+    if not tgt_lead.address and src_lead.address: tgt_lead.address = src_lead.address
+    
+    # Re-assign contacts
+    contact_res = await db.execute(select(Contact).where(Contact.lead_id == src_lead.id))
+    contacts = contact_res.scalars().all()
+    for c in contacts:
+        c.lead_id = tgt_lead.id
+        
+    # Delete source
+    await db.delete(src_lead)
+    await db.commit()
+    
+    return {"message": "Merged successfully", "target_id": tgt_lead.id}
