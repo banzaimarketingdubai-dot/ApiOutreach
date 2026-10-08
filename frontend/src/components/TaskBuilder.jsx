@@ -4,10 +4,10 @@ import { createCampaign, deleteCampaign } from '../services/api';
 import CampaignControlPanel from './CampaignControlPanel';
 
 export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, campaigns = [] }) {
-  const [campaignName, setCampaignName] = useState('Manual Dental Clinic Scraping');
-  const [geo, setGeo] = useState('Dubai');
-  const [niche, setNiche] = useState('Dental Clinics');
-  const [query, setQuery] = useState('Dental Clinic in Dubai');
+  const [campaignName, setCampaignName] = useState('');
+  const [geo, setGeo] = useState('');
+  const [niche, setNiche] = useState('');
+  const [query, setQuery] = useState('');
   const [maxPlaces, setMaxPlaces] = useState(100);
   const [submitting, setSubmitting] = useState(false);
   const [activeCampaignId, setActiveCampaignId] = useState(null);
@@ -78,6 +78,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
             <div>
               <label className="text-slate-400 font-semibold mb-1 block">Campaign Name</label>
               <input
+                required
                 type="text"
                 value={campaignName}
                 onChange={(e) => setCampaignName(e.target.value)}
@@ -89,6 +90,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
               <div>
                 <label className="text-slate-400 font-semibold mb-1 block">Target GEO</label>
                 <input
+                  required
                   type="text"
                   value={geo}
                   onChange={(e) => setGeo(e.target.value)}
@@ -98,6 +100,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
               <div>
                 <label className="text-slate-400 font-semibold mb-1 block">Niche</label>
                 <input
+                  required
                   type="text"
                   value={niche}
                   onChange={(e) => setNiche(e.target.value)}
@@ -110,6 +113,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
               <div>
                 <label className="text-slate-400 font-semibold mb-1 block">Search Query</label>
                 <input
+                  required
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

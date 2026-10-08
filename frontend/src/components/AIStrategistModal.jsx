@@ -3,9 +3,9 @@ import { Sparkles, X, Check, RefreshCw, Send, Plus, Trash2, ArrowRight } from 'l
 import { generateAIStrategy, createCampaign } from '../services/api';
 
 export default function AIStrategistModal({ isOpen, onClose, onCampaignCreated }) {
-  const [goal, setGoal] = useState('We want to collect high-ticket dental clinics in Dubai that lack online booking widgets');
-  const [geo, setGeo] = useState('Dubai');
-  const [notes, setNotes] = useState('Target businesses with over 4 stars rating');
+  const [goal, setGoal] = useState('');
+  const [geo, setGeo] = useState('');
+  const [notes, setNotes] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [strategy, setStrategy] = useState(null);
@@ -15,9 +15,13 @@ export default function AIStrategistModal({ isOpen, onClose, onCampaignCreated }
   if (!isOpen) return null;
 
   const handleGenerate = async () => {
+    if (!goal.trim()) {
+      alert("Please enter your Outreach Goal before generating a strategy.");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await generateAIStrategy(goal, geo, notes);
+      const res = await generateAIStrategy(goal, geo || "Worldwide", notes);
       setStrategy(res);
       setEditingConfig(res.recommendation);
     } catch (err) {
