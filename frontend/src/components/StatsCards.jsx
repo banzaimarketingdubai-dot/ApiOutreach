@@ -5,28 +5,28 @@ export default function StatsCards({ leadsCount = 0, campaignsCount = 0 }) {
   const stats = [
     {
       title: 'Total Master Data Leads',
-      value: leadsCount > 0 ? leadsCount : '1,284',
-      change: '+14% this week',
+      value: leadsCount || 0,
+      change: '+0% this week',
       icon: Database,
       color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20'
     },
     {
       title: 'High Revo Score (80+)',
-      value: Math.round(leadsCount * 0.65) || '832',
+      value: Math.round(leadsCount * 0.65) || 0,
       change: 'High conversion target',
       icon: Flame,
       color: 'from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/20'
     },
     {
       title: 'WhatsApp Verified',
-      value: Math.round(leadsCount * 0.52) || '665',
+      value: Math.round(leadsCount * 0.52) || 0,
       change: 'Direct messenger outreach ready',
       icon: MessageSquare,
       color: 'from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20'
     },
     {
       title: 'Active Campaigns',
-      value: campaignsCount || '3',
+      value: campaignsCount || 0,
       change: 'AI Scraping & LLM Batching',
       icon: ShieldCheck,
       color: 'from-purple-500/20 to-purple-600/5 text-purple-400 border-purple-500/20'
