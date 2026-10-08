@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getCampaignStatus } from '../services/api';
-import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight } from 'lucide-react';
+import { getCampaignStatus, retryFailed } from '../services/api';
+import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight, Target, RefreshCw } from 'lucide-react';
 import EditCampaignModal from './EditCampaignModal';
+import LeadScoreSettingsModal from './LeadScoreSettingsModal';
 
 export default function CampaignControlPanel({ campaignId, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [scoreModalOpen, setScoreModalOpen] = useState(false);
 
   useEffect(() => {
     if (!campaignId) return;
@@ -121,14 +123,34 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
 
       {/* Action Bar */}
       <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center">
-        <div className="text-[10px] text-slate-500">Live feed connected via HTTP Polling (2s)</div>
         <div className="flex space-x-2">
            <button 
              onClick={() => setEditModalOpen(true)}
-             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all mr-2"
+             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
            >
              <Settings className="w-3 h-3" /> <span>Edit</span>
            </button>
+           <button 
+             onClick={() => setScoreModalOpen(true)}
+             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+           >
+             <Target className="w-3 h-3 text-purple-400" /> <span>Score Settings</span>
+           </button>
+           <button 
+             onClick={async () => {
+               try {
+                 await retryFailed(campaignId);
+                 alert('Retry job sent to Celery successfully!');
+               } catch(e) {
+                 alert(e.message);
+               }
+             }}
+             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+           >
+             <RefreshCw className="w-3 h-3 text-blue-400" /> <span>Retry Failed Enrichment</span>
+           </button>
+        </div>
+        <div className="flex space-x-2">
            {status === 'RUNNING' && (
              <button 
                onClick={async () => { await import('../services/api').then(m => m.pauseCampaign(campaignId)); setData({...data, status: 'PAUSED'}) }}
@@ -161,6 +183,14 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
           campaignId={campaignId}
           initialData={data}
           onClose={() => setEditModalOpen(false)}
+        />
+      )}
+
+      {scoreModalOpen && (
+        <LeadScoreSettingsModal 
+          campaignId={campaignId}
+          initialRules={data?.ai_config?.scoring_rules}
+          onClose={() => setScoreModalOpen(false)}
         />
       )}
     </div>

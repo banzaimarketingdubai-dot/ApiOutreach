@@ -58,6 +58,22 @@ export async function updateCampaign(id, data) {
   return res.json();
 }
 
+export async function retryFailed(id) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/retry-failed`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to retry');
+  return res.json();
+}
+
+export async function recalculateScore(id, scoring_rules) {
+  const res = await fetch(`${API_BASE}/campaigns/${id}/recalculate-score`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scoring_rules })
+  });
+  if (!res.ok) throw new Error('Failed to recalculate score');
+  return res.json();
+}
+
 export async function pauseCampaign(id) {
   const res = await fetch(`${API_BASE}/campaigns/${id}/pause`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to pause campaign');

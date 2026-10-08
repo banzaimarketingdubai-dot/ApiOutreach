@@ -183,3 +183,64 @@ async def stop_campaign(
         c.status = CampaignStatus.CANCELLED
         await _append_log(c, db, "error", "Campaign emergency stopped by operator.")
     return {"status": c.status}
+
+@router.post("/{campaign_id}/retry-failed")
+async def retry_failed_batches(
+    campaign_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    from app.workers.enrichment_tasks import run_campaign_enrichment
+    run_campaign_enrichment.delay(str(c.id))
+    await _append_log(c, db, "info", "Retry requested. Re-running enrichment phase.")
+    return {"status": "Enrichment retried"}
+
+from pydantic import BaseModel
+class RecalculateScoreRequest(BaseModel):
+    scoring_rules: dict
+
+@router.post("/{campaign_id}/recalculate-score")
+async def recalculate_score(
+    campaign_id: UUID,
+    body: RecalculateScoreRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Campaign).where(Campaign.id == campaign_id)
+    res = await db.execute(stmt)
+    c = res.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    # Update rules
+    c.ai_config = {**c.ai_config, "scoring_rules": body.scoring_rules}
+    
+    # Recalculate all leads in campaign synchronously for MVP
+    from app.models.lead import Lead
+    from app.services.scoring import calculate_revo_score_and_audit
+    
+    leads_res = await db.execute(select(Lead).where(Lead.campaign_id == campaign_id))
+    leads = leads_res.scalars().all()
+    
+    for lead in leads:
+        has_web = bool(lead.website)
+        has_phone = bool(lead.phone)
+        score, audit_notes = calculate_revo_score_and_audit(
+            rating=lead.rating or 0.0,
+            reviews_count=lead.reviews_count or 0,
+            has_website=has_web,
+            has_phone=has_phone,
+            scoring_rules=body.scoring_rules
+        )
+        lead.revo_score = score
+        lead.audit_notes = audit_notes
+        
+    await _append_log(c, db, "success", f"Mass recalculated scores for {len(leads)} leads.")
+    await db.commit()
+    return {"message": "Scores recalculated", "updated_leads": len(leads)}
