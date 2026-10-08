@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,9 +24,18 @@ class Settings(BaseSettings):
     GROK_API_KEYS: List[str] = []
     
     # LLM Settings
-    PRIMARY_GEMINI_MODEL: str = "gemini-1.5-pro"  # Fallback chain: gemini-1.5-pro, gemini-1.5-flash, gemini-1.0-pro
+    PRIMARY_GEMINI_MODEL: str = "gemini-1.5-pro"
     FALLBACK_GEMINI_MODELS: List[str] = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp"]
     
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
