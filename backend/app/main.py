@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.db.session import engine, Base
@@ -12,11 +12,17 @@ from app.api.leads import router as leads_router
 from app.api.tasks import router as tasks_router
 from app.api.export import router as export_router
 
+logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Auto-create tables on startup (if using SQLite/Postgres without Alembic initially)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Auto-create tables on startup
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables initialized successfully.")
+    except Exception as e:
+        logger.warning(f"Database table initialization skipped/warning: {e}")
     yield
 
 app = FastAPI(
