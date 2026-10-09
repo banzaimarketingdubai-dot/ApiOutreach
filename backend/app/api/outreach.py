@@ -88,8 +88,20 @@ REVO Master Data
     )
 
 @router.post("/send")
-def send_outreach_email(request: SendRequest, db: Session = Depends(get_db)):
+async def send_outreach_email(request: SendRequest, db: Session = Depends(get_db)):
     try:
+        from app.models.vault import VaultKey
+        from sqlalchemy import select
+        
+        # 1. Try DB Vault
+        resend_vault_res = await db.execute(select(VaultKey).filter(VaultKey.provider == "resend"))
+        resend_vault = resend_vault_res.scalar_one_or_none()
+        if resend_vault and resend_vault.api_key_encrypted:
+            resend.api_key = resend_vault.api_key_encrypted
+        else:
+            # 2. Try OS Env
+            resend.api_key = os.environ.get("RESEND_API_KEY", "re_mock_key_123")
+            
         if resend.api_key == "re_mock_key_123":
             print(f"[MOCK SEND] Email to {request.recipient_email} via Resend. Subject: {request.subject}")
             return {"status": "success", "message": "Simulated sending email (Missing API Key)", "id": "mock_123"}

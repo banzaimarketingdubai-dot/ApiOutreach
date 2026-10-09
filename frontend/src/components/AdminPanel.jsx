@@ -105,6 +105,7 @@ export default function AdminPanel() {
                   <option value="apify">Apify</option>
                   <option value="gemini">Google Gemini</option>
                   <option value="hubspot">HubSpot CRM</option>
+                  <option value="resend">Resend (Outreach)</option>
                 </select>
               </div>
               <div>

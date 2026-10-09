@@ -33,6 +33,7 @@ async def get_vault_status(
     apify_key = db_keys.get("apify") or settings.APIFY_API_TOKEN or os.getenv("APIFY_API_TOKEN")
     gemini_key = db_keys.get("gemini") or settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
     hubspot_key = db_keys.get("hubspot") or os.getenv("HUBSPOT_API_KEY")
+    resend_key = db_keys.get("resend") or os.getenv("RESEND_API_KEY")
     
     providers = []
     if apify_key:
@@ -41,6 +42,8 @@ async def get_vault_status(
         providers.append({"provider": "gemini", "status": "configured", "source": "Vault" if "gemini" in db_keys else ".env", "masked": mask_key(gemini_key)})
     if hubspot_key:
         providers.append({"provider": "hubspot", "status": "configured", "source": "Vault" if "hubspot" in db_keys else ".env", "masked": mask_key(hubspot_key)})
+    if resend_key:
+        providers.append({"provider": "resend", "status": "configured", "source": "Vault" if "resend" in db_keys else ".env", "masked": mask_key(resend_key)})
         
     return providers
 
