@@ -85,32 +85,40 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
             if not leads:
                 return
 
-            site_batches = []
-            for lead in leads:
-                text = await AIEnrichmentService.extract_website_text(lead.website)
-                if text:
-                    site_batches.append({
-                        "lead_id": str(lead.id),
-                        "website": lead.website,
-                        "text": text
-                    })
-                else:
-                    # Mark as failed if no text could be extracted
-                    existing_custom = dict(lead.custom_data) if lead.custom_data else {}
-                    existing_custom["enrichment_status"] = "failed"
-                    lead.custom_data = existing_custom
-                    from sqlalchemy.orm.attributes import flag_modified
-                    flag_modified(lead, "custom_data")
-            await db.commit()
-
+            # Process in batches of 5 to avoid memory blowup and update UI incrementally
             batch_size = 5
-            for i in range(0, len(site_batches), batch_size):
-                chunk = site_batches[i:i + batch_size]
-                extracted_results = await AIEnrichmentService.batch_enrich_sites(chunk, custom_vars)
+            for i in range(0, len(leads), batch_size):
+                chunk_leads = leads[i:i + batch_size]
+                site_batches = []
+                
+                # Extract text for this small batch
+                for lead in chunk_leads:
+                    text = await AIEnrichmentService.extract_website_text(lead.website)
+                    if text:
+                        site_batches.append({
+                            "lead_id": str(lead.id),
+                            "website": lead.website,
+                            "text": text
+                        })
+                    else:
+                        existing_custom = dict(lead.custom_data) if lead.custom_data else {}
+                        existing_custom["enrichment_status"] = "failed"
+                        existing_custom["ai_logs"] = ["[ERROR] Website blocked access or returned empty HTML"]
+                        lead.custom_data = existing_custom
+                        from sqlalchemy.orm.attributes import flag_modified
+                        flag_modified(lead, "custom_data")
+                
+                await db.commit()
+
+                if not site_batches:
+                    continue
+
+                # Enrich this batch
+                extracted_results = await AIEnrichmentService.batch_enrich_sites(site_batches, custom_vars)
                 
                 import re
                 from app.models.contact import Contact
-                for item in chunk:
+                for item in site_batches:
                     lead_id = item["lead_id"]
                     l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
                     target_lead = l_res.scalars().first()
@@ -118,8 +126,16 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     
                     # Store AI custom data and mark completed
                     existing_custom = dict(target_lead.custom_data) if target_lead.custom_data else {}
-                    if lead_id in extracted_results:
+                    if lead_id in extracted_results and extracted_results[lead_id]:
                         existing_custom.update(extracted_results[lead_id])
+                        if "ai_logs" not in existing_custom:
+                            existing_custom["ai_logs"] = []
+                        existing_custom["ai_logs"].append(f"[SUCCESS] Analyzed {target_lead.website} and extracted custom variables.")
+                    else:
+                        if "ai_logs" not in existing_custom:
+                            existing_custom["ai_logs"] = []
+                        existing_custom["ai_logs"].append(f"[WARNING] API Rate limit or parse failure for this batch.")
+                        
                     existing_custom["enrichment_status"] = "completed"
                     target_lead.custom_data = existing_custom
                     from sqlalchemy.orm.attributes import flag_modified
@@ -141,6 +157,9 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                             db.add(Contact(lead_id=target_lead.id, contact_type="whatsapp", contact_value=wa))
                     
                 await db.commit()
+                # Cooldown to respect Gemini 15 RPM limits
+                await asyncio.sleep(5)
+                
             logger.info("Targeted enrichment completed")
 
     asyncio.run(_process())
