@@ -154,7 +154,7 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         if first_phone:
                             phone_to_check = first_phone.contact_value
 
-                    async def _check_msg(phone, custom_data_dict):
+                    async def _check_msg(phone, custom_data_dict, lead_id):
                         try:
                             import asyncio
                             info = await asyncio.to_thread(verify_messenger_availability, phone)
@@ -164,11 +164,21 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                             if "ai_logs" not in custom_data_dict:
                                 custom_data_dict["ai_logs"] = []
                             custom_data_dict["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone}")
+                            
+                            # Add to Contact table so UI shows icons
+                            if custom_data_dict["whatsapp_available"]:
+                                existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "whatsapp"))
+                                if not existing.scalars().first():
+                                    db.add(Contact(lead_id=lead_id, contact_type="whatsapp", contact_value=info.get("clean_phone", phone)))
+                            if custom_data_dict["telegram_available"]:
+                                existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "telegram"))
+                                if not existing.scalars().first():
+                                    db.add(Contact(lead_id=lead_id, contact_type="telegram", contact_value=info.get("clean_phone", phone)))
                         except Exception as e:
                             logger.error(f"Messenger check failed for {phone}: {e}")
 
                     if phone_to_check:
-                        await _check_msg(phone_to_check, existing_custom)
+                        await _check_msg(phone_to_check, existing_custom, target_lead.id)
                             
                     target_lead.custom_data = existing_custom
                     from sqlalchemy.orm.attributes import flag_modified
