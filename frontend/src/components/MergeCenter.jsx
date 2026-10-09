@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { getSuspectedDuplicates, mergeLeads } from '../services/api';
 import { GitMerge, Loader2, CheckCircle, Trash2, ArrowRight } from 'lucide-react';
 
-export default function MergeCenter() {
+export default function MergeCenter({ globalCampaignId }) {
   const [duplicateGroups, setDuplicateGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [merging, setMerging] = useState(false);
 
   useEffect(() => {
     fetchDuplicates();
-  }, []);
+  }, [globalCampaignId]);
 
   const fetchDuplicates = async () => {
     setLoading(true);
     try {
-      const data = await getSuspectedDuplicates();
+      const data = await getSuspectedDuplicates(globalCampaignId);
       setDuplicateGroups(data);
     } catch (e) {
       console.error(e);

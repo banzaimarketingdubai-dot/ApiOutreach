@@ -81,8 +81,9 @@ export async function recalculateScore(id, scoring_rules) {
   return res.json();
 }
 
-export async function getSuspectedDuplicates() {
-  const res = await fetch(`${API_BASE}/leads/tools/duplicates`);
+export async function getSuspectedDuplicates(campaign_id = '') {
+  const query = campaign_id ? `?campaign_id=${campaign_id}` : '';
+  const res = await fetch(`${API_BASE}/leads/tools/duplicates${query}`);
   if (!res.ok) throw new Error('Failed to fetch duplicates');
   return res.json();
 }

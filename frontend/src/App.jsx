@@ -14,13 +14,16 @@ export default function App() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
+  const [globalCampaignId, setGlobalCampaignId] = useState('');
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [filters, setFilters] = useState({ city: '', min_score: '', search: '' });
 
   const loadLeads = async () => {
     try {
-      const data = await fetchLeads(filters);
+      const fetchFilters = { ...filters };
+      if (globalCampaignId) fetchFilters.campaign_id = globalCampaignId;
+      const data = await fetchLeads(fetchFilters);
       setLeads(data.items || []);
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -38,8 +41,11 @@ export default function App() {
 
   useEffect(() => {
     loadLeads();
+  }, [filters, globalCampaignId]);
+
+  useEffect(() => {
     loadCampaigns();
-  }, [filters]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col">
@@ -49,6 +55,9 @@ export default function App() {
         onOpenAIStrategist={() => setIsAIModalOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        campaigns={campaigns}
+        globalCampaignId={globalCampaignId}
+        setGlobalCampaignId={setGlobalCampaignId}
       />
 
       {/* Main Content Area */}
@@ -75,7 +84,7 @@ export default function App() {
           />
         )}
         {activeTab === 'merge' && (
-          <MergeCenter />
+          <MergeCenter globalCampaignId={globalCampaignId} />
         )}
         {activeTab === 'admin' && (
           <AdminPanel />

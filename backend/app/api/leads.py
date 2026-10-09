@@ -21,6 +21,7 @@ async def list_leads(
     has_website: Optional[bool] = Query(None),
     min_score: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
+    campaign_id: Optional[UUID] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -39,6 +40,8 @@ async def list_leads(
         filters.append(or_(Lead.website.is_(None), Lead.website == ""))
     if min_score is not None:
         filters.append(Lead.revo_score >= min_score)
+    if campaign_id:
+        filters.append(Lead.campaign_id == campaign_id)
     if search:
         filters.append(or_(
             Lead.company_name.ilike(f"%{search}%"),
@@ -131,11 +134,15 @@ async def delete_lead(
 
 @router.get("/tools/duplicates", response_model=List[List[LeadResponse]])
 async def get_suspected_duplicates(
+    campaign_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     # Simple MVP duplicate detection: Group by first word of company_name in the same city
-    res = await db.execute(select(Lead))
+    stmt = select(Lead)
+    if campaign_id:
+        stmt = stmt.where(Lead.campaign_id == campaign_id)
+    res = await db.execute(stmt)
     all_leads = res.scalars().all()
     
     groups = {}
