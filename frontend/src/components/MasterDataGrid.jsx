@@ -173,7 +173,10 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                       ? 'https://web-production-c4d98.up.railway.app/api/v1' 
                       : '/api/v1';
                       
-                    const payload = { lead_ids: selectedLeads.map(l => l.id) };
+                    const payload = selectAllGlobal 
+                      ? { select_all: true, filters } 
+                      : { lead_ids: selectedLeads.map(l => l.id) };
+                      
                     const res = await fetch(`${API_BASE}/leads/tools/reset_enrichment`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

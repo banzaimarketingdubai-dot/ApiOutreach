@@ -330,10 +330,19 @@ async def restore_leads(
 async def reset_enrichment_status(payload: dict, db: AsyncSession = Depends(get_db)):
     """Reset stuck in_progress status for selected leads."""
     lead_ids = payload.get("lead_ids", [])
-    if not lead_ids:
-        return {"status": "ok", "reset_count": 0}
+    select_all = payload.get("select_all", False)
+    filters = payload.get("filters", {})
 
-    res = await db.execute(select(Lead).where(cast(Lead.id, String).in_(lead_ids)))
+    query = select(Lead)
+    if select_all:
+        from app.api.leads import apply_lead_filters
+        query = apply_lead_filters(query, filters)
+    else:
+        if not lead_ids:
+            return {"status": "ok", "reset_count": 0}
+        query = query.where(cast(Lead.id, String).in_(lead_ids))
+
+    res = await db.execute(query)
     leads = res.scalars().all()
     count = 0
     for l in leads:
@@ -344,6 +353,7 @@ async def reset_enrichment_status(payload: dict, db: AsyncSession = Depends(get_
                 existing["ai_logs"] = []
             existing["ai_logs"].append("[WARNING] Enrichment was manually cancelled or reset by user.")
             l.custom_data = existing
+            from sqlalchemy.orm.attributes import flag_modified
             flag_modified(l, "custom_data")
             count += 1
             
