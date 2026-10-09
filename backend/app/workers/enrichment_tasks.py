@@ -91,9 +91,16 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                 chunk_leads = leads[i:i + batch_size]
                 site_batches = []
                 
-                # Extract text for this small batch
-                for lead in chunk_leads:
-                    text, err_msg = await AIEnrichmentService.extract_website_text(lead.website)
+                # Extract text for this small batch concurrently
+                import asyncio
+                
+                async def _extract_for_lead(l):
+                    t, err = await AIEnrichmentService.extract_website_text(l.website)
+                    return l, t, err
+                    
+                extraction_results = await asyncio.gather(*[_extract_for_lead(l) for l in chunk_leads])
+                
+                for lead, text, err_msg in extraction_results:
                     if text:
                         site_batches.append({
                             "lead_id": str(lead.id),
@@ -147,17 +154,21 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         if first_phone:
                             phone_to_check = first_phone.contact_value
 
-                    if phone_to_check:
+                    async def _check_msg(phone, custom_data_dict):
                         try:
-                            info = verify_messenger_availability(phone_to_check)
-                            existing_custom["telegram_available"] = info.get("telegram_available", False)
-                            existing_custom["whatsapp_available"] = info.get("whatsapp_available", False)
-                            existing_custom["viber_available"] = info.get("viber_available", False)
-                            if "ai_logs" not in existing_custom:
-                                existing_custom["ai_logs"] = []
-                            existing_custom["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone_to_check}")
+                            import asyncio
+                            info = await asyncio.to_thread(verify_messenger_availability, phone)
+                            custom_data_dict["telegram_available"] = info.get("telegram_available", False)
+                            custom_data_dict["whatsapp_available"] = info.get("whatsapp_available", False)
+                            custom_data_dict["viber_available"] = info.get("viber_available", False)
+                            if "ai_logs" not in custom_data_dict:
+                                custom_data_dict["ai_logs"] = []
+                            custom_data_dict["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone}")
                         except Exception as e:
-                            logger.error(f"Messenger check failed for {phone_to_check}: {e}")
+                            logger.error(f"Messenger check failed for {phone}: {e}")
+
+                    if phone_to_check:
+                        await _check_msg(phone_to_check, existing_custom)
                             
                     target_lead.custom_data = existing_custom
                     from sqlalchemy.orm.attributes import flag_modified
