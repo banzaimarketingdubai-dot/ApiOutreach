@@ -57,9 +57,11 @@ def run_campaign_enrichment(self, campaign_id: str):
                         l_res = await db.execute(select(Lead).where(Lead.id == lead_id))
                         target_lead = l_res.scalars().first()
                         if target_lead:
-                            existing_custom = target_lead.custom_data or {}
+                            existing_custom = dict(target_lead.custom_data) if target_lead.custom_data else {}
                             existing_custom.update(extracted_results[lead_id])
                             target_lead.custom_data = existing_custom
+                            from sqlalchemy.orm.attributes import flag_modified
+                            flag_modified(target_lead, "custom_data")
                 
                 await db.commit()
             logger.info(f"Enrichment completed for campaign {campaign_id}")
@@ -94,9 +96,11 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     })
                 else:
                     # Mark as failed if no text could be extracted
-                    existing_custom = lead.custom_data or {}
+                    existing_custom = dict(lead.custom_data) if lead.custom_data else {}
                     existing_custom["enrichment_status"] = "failed"
                     lead.custom_data = existing_custom
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(lead, "custom_data")
             await db.commit()
 
             batch_size = 5
@@ -113,11 +117,13 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     if not target_lead: continue
                     
                     # Store AI custom data and mark completed
-                    existing_custom = target_lead.custom_data or {}
+                    existing_custom = dict(target_lead.custom_data) if target_lead.custom_data else {}
                     if lead_id in extracted_results:
                         existing_custom.update(extracted_results[lead_id])
                     existing_custom["enrichment_status"] = "completed"
                     target_lead.custom_data = existing_custom
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(target_lead, "custom_data")
                         
                     # Extract Emails via Regex
                     emails = set(re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', item["text"]))

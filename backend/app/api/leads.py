@@ -123,9 +123,9 @@ async def list_leads(
     # Apply sorting
     sort_column = getattr(Lead, sort_by, Lead.created_at)
     if sort_order.lower() == "desc":
-        stmt = stmt.order_by(desc(sort_column))
+        stmt = stmt.order_by(desc(sort_column), desc(Lead.id))
     else:
-        stmt = stmt.order_by(sort_column)
+        stmt = stmt.order_by(sort_column, desc(Lead.id))
 
     # Count total
     count_stmt = select(func.count()).select_from(stmt.subquery())

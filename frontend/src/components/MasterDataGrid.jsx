@@ -285,22 +285,22 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1.5">
                           {phones.length > 0 && <Phone className="w-3.5 h-3.5 text-emerald-400" title="Phone available" />}
                           {emails.length > 0 && <Mail className="w-3.5 h-3.5 text-blue-400" title="Email available" />}
                           {whatsapp.length > 0 && <MessageSquare className="w-3.5 h-3.5 text-teal-400" title="WhatsApp available" />}
+                          {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
                         </div>
                         
                         {lead.custom_data?.enrichment_status === 'in_progress' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse">Enriching...</span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse whitespace-nowrap">Enriching...</span>
                         )}
                         {lead.custom_data?.enrichment_status === 'completed' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Done</span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">AI Done</span>
                         )}
                         {lead.custom_data?.enrichment_status === 'failed' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">AI Failed</span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap">AI Failed</span>
                         )}
-                        {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right">
