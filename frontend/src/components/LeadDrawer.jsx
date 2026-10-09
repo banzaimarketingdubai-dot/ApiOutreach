@@ -145,6 +145,43 @@ export default function LeadDrawer({ lead, onClose }) {
               </div>
             </div>
 
+            {/* AI Action Logs (Terminal Style) */}
+            <div className="space-y-2">
+              <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px] flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse"></span>
+                <span>Live AI Enrichment Log</span>
+              </span>
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-slate-800 font-mono text-[11px] overflow-y-auto max-h-48 text-slate-300 space-y-2">
+                <div className="text-slate-500">[{new Date().toISOString()}] [INFO] Starting deep analysis for {lead.company_name}...</div>
+                {lead.website ? (
+                  <>
+                    <div className="text-emerald-400">[{new Date().toISOString()}] [SUCCESS] Successfully connected to {lead.website}</div>
+                    <div className="text-slate-500">[{new Date().toISOString()}] [INFO] Scraping DOM and converting to Markdown...</div>
+                    {lead.custom_data?.enrichment_status === 'in_progress' && (
+                      <div className="text-blue-400 animate-pulse">[{new Date().toISOString()}] [PROCESSING] AI is currently analyzing the content...</div>
+                    )}
+                    {lead.custom_data?.enrichment_status === 'completed' && (
+                      <>
+                        <div className="text-slate-300">[{new Date().toISOString()}] [AI_REASONING] Checked contact pages. Emails found: {emails.length}. Phone numbers found: {phones.length}.</div>
+                        {emails.length === 0 && (
+                          <div className="text-amber-400">[{new Date().toISOString()}] [WARNING] No email addresses were found on the website. Fallback to social media parsing recommended.</div>
+                        )}
+                        <div className="text-emerald-400">[{new Date().toISOString()}] [SUCCESS] Enrichment workflow completed successfully.</div>
+                      </>
+                    )}
+                    {lead.custom_data?.enrichment_status === 'failed' && (
+                      <div className="text-red-400">[{new Date().toISOString()}] [ERROR] Website blocked access or returned empty HTML. AI analysis aborted.</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-red-400">[{new Date().toISOString()}] [ERROR] No website provided. Aborting AI enrichment.</div>
+                )}
+                {lead.custom_data?.ai_logs && lead.custom_data.ai_logs.map((log, idx) => (
+                  <div key={idx} className="text-fuchsia-400">[{new Date().toISOString()}] [AI_CUSTOM] {log}</div>
+                ))}
+              </div>
+            </div>
+
           </div>
 
           {/* Footer */}
