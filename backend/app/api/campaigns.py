@@ -216,6 +216,21 @@ async def reset_stuck_leads(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": f"Reset {count} stuck leads back to none"}
 
+@router.post("/tools/fix_dubai_kyiv_geo")
+async def fix_dubai_kyiv_geo(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import update
+    from app.models.lead import Lead
+    
+    stmt = update(Lead).where(
+        Lead.city.ilike("%Dubai%") & 
+        (Lead.address.ilike("%Kyiv%") | Lead.address.ilike("%Київ%"))
+    ).values(city="Kyiv")
+    
+    res = await db.execute(stmt)
+    await db.commit()
+    
+    return {"message": f"Fixed GEO for {res.rowcount} leads from Dubai to Kyiv"}
+
 @router.post("/{campaign_id}/resume")
 async def resume_campaign(
     campaign_id: UUID,
