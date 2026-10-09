@@ -187,6 +187,39 @@ async def clean_all_leads(
     await db.execute(text("TRUNCATE TABLE leads CASCADE"))
     await db.commit()
 
+@router.post("/tools/restore")
+async def restore_leads(
+    leads_data: List[dict],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.email != "admin@revo.ai":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    from app.models.contact import Contact
+    
+    for item in leads_data:
+        lead = Lead(
+            company_name=item.get("company_name", "Unknown"),
+            business_type=item.get("business_type"),
+            city="Dubai",
+            address=item.get("address"),
+            website=item.get("website"),
+            rating=item.get("rating", 0.0),
+            reviews_count=item.get("reviewsCount", 0),
+            custom_data={}
+        )
+        db.add(lead)
+        await db.flush() # flush to get lead.id
+        
+        if item.get("phone"):
+            db.add(Contact(lead_id=lead.id, contact_type="phone", contact_value=str(item["phone"])[:50]))
+        if item.get("email"):
+            db.add(Contact(lead_id=lead.id, contact_type="email", contact_value=str(item["email"])[:50]))
+            
+    await db.commit()
+    return {"status": "success", "restored": len(leads_data)}
+
 @router.post("/tools/enrich")
 async def trigger_targeted_enrichment(
     body: dict,
