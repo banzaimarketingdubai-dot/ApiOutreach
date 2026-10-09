@@ -16,27 +16,25 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Brand & Workspace Selector */}
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20">
+        <div className="flex items-center space-x-4 lg:space-x-6 flex-shrink-0">
+          <div className="flex items-center space-x-3 whitespace-nowrap">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20 flex-shrink-0">
               <Database className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                  REVO <span className="text-blue-500 font-light">MASTER DATA</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">AI-Driven Lead Generation</p>
+            <div className="flex flex-col justify-center">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent leading-none mb-1">
+                REVO <span className="text-blue-500 font-light">MASTER DATA</span>
+              </span>
+              <p className="text-[10px] text-slate-400 leading-none">AI-Driven Lead Gen</p>
             </div>
           </div>
           
-          <div className="hidden md:block h-8 w-px bg-slate-800"></div>
+          <div className="hidden md:block h-6 w-px bg-slate-800"></div>
 
           <select
             value={globalCampaignId}
             onChange={(e) => setGlobalCampaignId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-white font-semibold rounded-lg text-sm px-4 py-2 focus:ring focus:ring-blue-500/50 outline-none hover:bg-slate-800 transition-colors cursor-pointer min-w-[200px]"
+            className="bg-slate-900 border border-slate-700 text-white font-semibold rounded-lg text-sm px-3 py-1.5 focus:ring focus:ring-blue-500/50 outline-none hover:bg-slate-800 transition-colors cursor-pointer w-40 lg:w-48 truncate"
           >
             <option value="">Global (All Projects)</option>
             {campaigns.map(c => (
