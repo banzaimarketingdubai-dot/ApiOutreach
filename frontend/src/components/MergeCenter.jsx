@@ -73,9 +73,13 @@ export default function MergeCenter() {
                 <div key={lead.id} className="border border-slate-700 rounded-lg p-4 bg-slate-950 relative">
                   <h4 className="font-bold text-white mb-1">{lead.company_name}</h4>
                   <div className="text-xs text-slate-400 mb-4 space-y-1">
-                    <p>🌐 {lead.website || 'No website'}</p>
-                    <p>📞 {lead.phone || 'No phone'}</p>
-                    <p>📍 {lead.address || 'No address'}</p>
+                    <p className="truncate">🌐 {lead.website ? <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{lead.website}</a> : 'No website'}</p>
+                    <p>📞 {(lead.contacts || []).find(c => c.contact_type === 'phone')?.contact_value || 'No phone'}</p>
+                    <p className="truncate">
+                      📍 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.company_name + ' ' + (lead.city || '') + ' ' + (lead.address || ''))}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-400 hover:underline" title="Open in Google Maps">
+                        {lead.address || 'No address'}
+                      </a>
+                    </p>
                     <p>⭐ Score: {lead.revo_score}</p>
                   </div>
                   

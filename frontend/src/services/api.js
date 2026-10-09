@@ -4,7 +4,8 @@ const API_BASE = IS_PROD
   : '/api/v1';
 
 export async function fetchLeads(params = {}) {
-  const query = new URLSearchParams(params).toString();
+  const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== ''));
+  const query = new URLSearchParams(cleanParams).toString();
   const res = await fetch(`${API_BASE}/leads?${query}`);
   if (!res.ok) throw new Error('Failed to fetch leads');
   return res.json();

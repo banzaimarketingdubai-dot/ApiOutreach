@@ -55,12 +55,19 @@ export default function LeadDrawer({ lead, onClose }) {
             <div className="space-y-2">
               <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px]">Location & Web</span>
               <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                <p className="text-slate-300"><strong>Address:</strong> {lead.address || 'N/A'}</p>
+                <p className="text-slate-300">
+                  <strong>Address:</strong>{' '}
+                  {lead.address ? (
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.company_name + ' ' + (lead.city || '') + ' ' + lead.address)}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
+                      {lead.address}
+                    </a>
+                  ) : 'N/A'}
+                </p>
                 {lead.website && (
                   <p className="text-slate-300 flex items-center space-x-1">
                     <strong>Website:</strong>
                     <a
-                      href={lead.website.startswith && lead.website.startswith('http') ? lead.website : `https://${lead.website}`}
+                      href={lead.website.startsWith && lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-400 hover:underline inline-flex items-center ml-1"
@@ -78,25 +85,41 @@ export default function LeadDrawer({ lead, onClose }) {
               <span className="font-semibold text-slate-400 block uppercase tracking-wider text-[10px]">Extracted Contacts</span>
               <div className="space-y-2">
                 {lead.contacts && lead.contacts.length > 0 ? (
-                  lead.contacts.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                      <div className="flex items-center space-x-2">
-                        {c.contact_type === 'phone' && <Phone className="w-4 h-4 text-emerald-400" />}
-                        {c.contact_type === 'email' && <Mail className="w-4 h-4 text-blue-400" />}
-                        {c.contact_type === 'whatsapp' && <MessageSquare className="w-4 h-4 text-teal-400" />}
-                        <span className="font-mono text-white text-xs">{c.contact_value}</span>
-                        <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">
-                          {c.source}
-                        </span>
+                  lead.contacts.map((c) => {
+                    let href = "#";
+                    if (c.contact_type === 'phone') href = `tel:${c.contact_value}`;
+                    if (c.contact_type === 'email') href = `mailto:${c.contact_value}`;
+                    if (c.contact_type === 'whatsapp') {
+                       const digits = c.contact_value.replace(/\D/g,'');
+                       href = `https://wa.me/${digits}`;
+                    }
+                    if (c.contact_type === 'telegram') {
+                       const handle = c.contact_value.replace('@','');
+                       href = `https://t.me/${handle}`;
+                    }
+
+                    return (
+                      <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <div className="flex items-center space-x-2">
+                          {c.contact_type === 'phone' && <Phone className="w-4 h-4 text-emerald-400" />}
+                          {c.contact_type === 'email' && <Mail className="w-4 h-4 text-blue-400" />}
+                          {c.contact_type === 'whatsapp' && <MessageSquare className="w-4 h-4 text-teal-400" />}
+                          <a href={href} target="_blank" rel="noreferrer" className="font-mono text-blue-400 hover:underline text-xs">
+                            {c.contact_value}
+                          </a>
+                          <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">
+                            {c.source}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(c.contact_value)}
+                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => copyToClipboard(c.contact_value)}
-                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-slate-500 italic">No standard contacts extracted yet.</p>
                 )}

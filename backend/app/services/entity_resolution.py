@@ -156,7 +156,7 @@ class LeadMergerService:
 
     async def _add_contacts_if_new(self, lead_id, raw_lead: dict):
         # Handle Phone
-        phone = raw_lead.get("phone")
+        phone = raw_lead.get("phoneUnformatted") or raw_lead.get("phone")
         if phone:
             norm_p = normalize_phone(phone)
             if norm_p:
