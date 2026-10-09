@@ -21,6 +21,16 @@ export async function checkMessengers(lead_ids) {
   return res.json();
 }
 
+export async function exportLeadRadar(lead_ids) {
+  const res = await fetch(`${API_BASE}/leads/export_lead_radar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_ids })
+  });
+  if (!res.ok) throw new Error('Failed to export to Lead Radar');
+  return res.json();
+}
+
 export async function fetchStats() {
   const res = await fetch(`${API_BASE}/leads/stats`);
   if (!res.ok) throw new Error('Failed to fetch stats');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud, Send, MessageCircle } from 'lucide-react';
-import { getExportCsvUrl, checkMessengers } from '../services/api';
+import { getExportCsvUrl, checkMessengers, exportLeadRadar } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
 import OutreachModal from './OutreachModal';
@@ -11,6 +11,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
   const [crmModalOpen, setCrmModalOpen] = useState(false);
   const [outreachLead, setOutreachLead] = useState(null);
   const [isCheckingMessengers, setIsCheckingMessengers] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSort = (column) => {
     if (filters.sort_by === column) {
@@ -66,6 +67,25 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
       alert('Failed to check messengers');
     } finally {
       setIsCheckingMessengers(false);
+    }
+  };
+
+  const handleOutreachSync = async () => {
+    if (selectedLeads.length === 0) return;
+    setIsSyncing(true);
+    try {
+      const res = await exportLeadRadar(selectedLeads.map(l => l.id));
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lead_radar_sync_${new Date().getTime()}.json`;
+      a.click();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to sync to Lead Radar');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -188,6 +208,19 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
               className="bg-transparent border-none w-12 focus:outline-none text-center"
             />
           </div>
+
+          <button
+            onClick={handleOutreachSync}
+            disabled={isSyncing || selectedLeads.length === 0}
+            className={`flex items-center px-4 py-2 text-xs font-semibold rounded-xl border transition-all ml-auto ${
+              isSyncing || selectedLeads.length === 0
+                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                : 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.6)]'
+            }`}
+          >
+            <Send className={`w-4 h-4 mr-1.5 ${isSyncing ? 'animate-pulse' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Outreach Sync'}</span>
+          </button>
 
           <button
             onClick={handleCheckMessengers}

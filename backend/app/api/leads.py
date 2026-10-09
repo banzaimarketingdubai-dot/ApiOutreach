@@ -411,3 +411,39 @@ async def check_messengers(
 
     await db.commit()
     return {"message": f"Checked messengers for {count} leads"}
+
+@router.post("/export_lead_radar")
+async def export_lead_radar(
+    body: CheckMessengersRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from sqlalchemy import select, cast, String
+    from fastapi.responses import JSONResponse
+    
+    stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in body.lead_ids]))
+    res = await db.execute(stmt)
+    leads = res.scalars().all()
+
+    export_data = []
+    for lead in leads:
+        cd = lead.custom_data or {}
+        platform = None
+        if cd.get("telegram_available"):
+            platform = "telegram"
+        elif cd.get("whatsapp_available"):
+            platform = "whatsapp"
+        
+        if platform:
+            export_data.append({
+                "telegram_id": lead.phone,
+                "author_username": lead.phone,
+                "niche_code": lead.business_type,
+                "chat_title": lead.company_name,
+                "raw_ad_text": lead.description or "",
+                "sales_hook": cd.get("draft_email", ""),
+                "confidence_score": lead.revo_score,
+                "platform": platform
+            })
+
+    return JSONResponse(content={"status": "success", "exported": len(export_data), "data": export_data})
