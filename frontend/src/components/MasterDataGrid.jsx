@@ -142,6 +142,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
             className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
           >
             <option value="">Any AI Status</option>
+            <option value="none">Not Enriched Yet</option>
             <option value="in_progress">AI Enriching...</option>
             <option value="completed">AI Done</option>
             <option value="failed">AI Failed</option>

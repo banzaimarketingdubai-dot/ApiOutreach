@@ -120,8 +120,15 @@ async def list_leads(
         filters.append(Lead.contacts.any(Contact.contact_type == "phone"))
 
     if enrichment_status:
-        from sqlalchemy import cast, String
-        filters.append(Lead.custom_data['enrichment_status'].astext == enrichment_status)
+        from sqlalchemy import cast, String, or_
+        if enrichment_status == "none":
+            filters.append(or_(
+                Lead.custom_data.is_(None),
+                Lead.custom_data['enrichment_status'].astext.is_(None),
+                Lead.custom_data['enrichment_status'].astext == ""
+            ))
+        else:
+            filters.append(Lead.custom_data['enrichment_status'].astext == enrichment_status)
         
     if filters:
         stmt = stmt.where(and_(*filters))
