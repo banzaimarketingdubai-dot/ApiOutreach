@@ -65,3 +65,69 @@ def run_campaign_enrichment(self, campaign_id: str):
             logger.info(f"Enrichment completed for campaign {campaign_id}")
 
     asyncio.run(_process())
+
+@celery_app.task(bind=True, name="app.workers.enrichment_tasks.run_targeted_enrichment")
+def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] = None):
+    logger.info(f"Starting targeted enrichment for {len(lead_ids)} leads")
+    if not custom_vars:
+        custom_vars = [
+            {"key": "has_online_booking", "description": "Does the site have online booking or appointment scheduling?"},
+            {"key": "uses_crm_chat", "description": "Does the site use WhatsApp or Live Chat widget?"}
+        ]
+        
+    async def _process():
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import cast, String
+            leads_res = await db.execute(select(Lead).where(cast(Lead.id, String).in_(lead_ids), Lead.website.isnot(None)))
+            leads = leads_res.scalars().all()
+            if not leads:
+                return
+
+            site_batches = []
+            for lead in leads:
+                text = await AIEnrichmentService.extract_website_text(lead.website)
+                if text:
+                    site_batches.append({
+                        "lead_id": str(lead.id),
+                        "website": lead.website,
+                        "text": text
+                    })
+
+            batch_size = 5
+            for i in range(0, len(site_batches), batch_size):
+                chunk = site_batches[i:i + batch_size]
+                extracted_results = await AIEnrichmentService.batch_enrich_sites(chunk, custom_vars)
+                
+                import re
+                from app.models.contact import Contact
+                for item in chunk:
+                    lead_id = item["lead_id"]
+                    l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
+                    target_lead = l_res.scalars().first()
+                    if not target_lead: continue
+                    
+                    # Store AI custom data
+                    if lead_id in extracted_results:
+                        existing_custom = target_lead.custom_data or {}
+                        existing_custom.update(extracted_results[lead_id])
+                        target_lead.custom_data = existing_custom
+                        
+                    # Extract Emails via Regex
+                    emails = set(re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', item["text"]))
+                    for email in emails:
+                        if len(email) < 50:
+                            existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == email))
+                            if not existing.scalars().first():
+                                db.add(Contact(lead_id=target_lead.id, contact_type="email", contact_value=email))
+                                
+                    # Extract wa.me links
+                    wa_links = set(re.findall(r'wa\.me/([0-9]+)', item["text"]))
+                    for wa in wa_links:
+                        existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == wa))
+                        if not existing.scalars().first():
+                            db.add(Contact(lead_id=target_lead.id, contact_type="whatsapp", contact_value=wa))
+                    
+                await db.commit()
+            logger.info("Targeted enrichment completed")
+
+    asyncio.run(_process())

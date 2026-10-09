@@ -59,13 +59,43 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {selectedLeads.length > 0 && (
-            <button
-              onClick={() => setDryRunModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs font-semibold border border-emerald-500/30 transition-all mr-2"
-            >
-              <Play className="w-3.5 h-3.5" />
-              <span>Dry Run AI ({selectedLeads.length})</span>
-            </button>
+            <>
+              <button
+                onClick={() => setDryRunModalOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs font-semibold border border-emerald-500/30 transition-all"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>Dry Run AI ({selectedLeads.length})</span>
+              </button>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    const API_BASE = window.location.hostname.includes('vercel.app') 
+                      ? 'https://web-production-c4d98.up.railway.app/api/v1' 
+                      : '/api/v1';
+                      
+                    const res = await fetch(`${API_BASE}/leads/tools/enrich`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ lead_ids: selectedLeads.map(l => l.id) })
+                    });
+                    if (res.ok) {
+                      alert('Targeted background enrichment queued successfully!');
+                      setSelectedLeads([]);
+                    } else {
+                      alert('Failed to start enrichment');
+                    }
+                  } catch (e) {
+                    alert('Error triggering enrichment');
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs font-semibold border border-purple-500/30 transition-all mr-2"
+              >
+                <Flame className="w-3.5 h-3.5" />
+                <span>Deep AI Enrich ({selectedLeads.length})</span>
+              </button>
+            </>
           )}
 
           <select

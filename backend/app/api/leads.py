@@ -187,6 +187,20 @@ async def clean_all_leads(
     await db.execute(text("TRUNCATE TABLE leads CASCADE"))
     await db.commit()
 
+@router.post("/tools/enrich")
+async def trigger_targeted_enrichment(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    lead_ids = body.get("lead_ids", [])
+    if not lead_ids:
+        raise HTTPException(status_code=400, detail="lead_ids array is required")
+        
+    from app.workers.enrichment_tasks import run_targeted_enrichment
+    run_targeted_enrichment.delay(lead_ids, None)
+    return {"status": "success", "message": f"Enrichment background task queued for {len(lead_ids)} leads"}
+
 @router.get("/tools/duplicates", response_model=List[List[LeadResponse]])
 async def get_suspected_duplicates(
     campaign_id: Optional[UUID] = Query(None),
