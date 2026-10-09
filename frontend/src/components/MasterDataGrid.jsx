@@ -9,6 +9,19 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
 
+  const handleSort = (column) => {
+    if (filters.sort_by === column) {
+      setFilters({ ...filters, sort_order: filters.sort_order === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setFilters({ ...filters, sort_by: column, sort_order: 'desc' });
+    }
+  };
+
+  const getSortIcon = (column) => {
+    if (filters.sort_by !== column) return <span className="opacity-0 group-hover:opacity-30 ml-1">↕</span>;
+    return <span className="text-blue-400 ml-1">{filters.sort_order === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   const handleExportCSV = () => {
     const url = getExportCsvUrl(filters);
     window.open(url, '_blank');
@@ -124,11 +137,21 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
           <thead>
             <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
               <th className="py-3 px-4 w-10"></th>
-              <th className="py-3 px-4">Company Name</th>
-              <th className="py-3 px-4">Type / Niche</th>
-              <th className="py-3 px-4">GEO / Address</th>
-              <th className="py-3 px-4">Rating</th>
-              <th className="py-3 px-4">Revo Score</th>
+              <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('company_name')}>
+                Company Name {getSortIcon('company_name')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('business_type')}>
+                Type / Niche {getSortIcon('business_type')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('city')}>
+                GEO / Address {getSortIcon('city')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('rating')}>
+                Rating {getSortIcon('rating')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('revo_score')}>
+                Revo Score {getSortIcon('revo_score')}
+              </th>
               <th className="py-3 px-4">Contacts Found</th>
               <th className="py-3 px-4 text-right">Action</th>
             </tr>

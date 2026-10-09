@@ -24,12 +24,14 @@ async def list_leads(
     max_rating: Optional[float] = Query(None),
     search: Optional[str] = Query(None),
     campaign_id: Optional[UUID] = Query(None),
+    sort_by: Optional[str] = Query("created_at"),
+    sort_order: Optional[str] = Query("desc"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Lead).order_by(desc(Lead.created_at))
+    stmt = select(Lead)
     filters = []
 
     if niche:
@@ -57,6 +59,13 @@ async def list_leads(
 
     if filters:
         stmt = stmt.where(and_(*filters))
+
+    # Apply sorting
+    sort_column = getattr(Lead, sort_by, Lead.created_at)
+    if sort_order.lower() == "desc":
+        stmt = stmt.order_by(desc(sort_column))
+    else:
+        stmt = stmt.order_by(sort_column)
 
     # Count total
     count_stmt = select(func.count()).select_from(stmt.subquery())
