@@ -300,7 +300,6 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         {lead.custom_data?.enrichment_status === 'failed' && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">AI Failed</span>
                         )}
-                      </div>
                         {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
                       </div>
                     </td>
