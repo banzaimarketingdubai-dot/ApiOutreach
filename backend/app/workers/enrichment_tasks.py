@@ -93,7 +93,7 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                 
                 # Extract text for this small batch
                 for lead in chunk_leads:
-                    text = await AIEnrichmentService.extract_website_text(lead.website)
+                    text, err_msg = await AIEnrichmentService.extract_website_text(lead.website)
                     if text:
                         site_batches.append({
                             "lead_id": str(lead.id),
@@ -103,7 +103,7 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     else:
                         existing_custom = dict(lead.custom_data) if lead.custom_data else {}
                         existing_custom["enrichment_status"] = "failed"
-                        existing_custom["ai_logs"] = ["[ERROR] Website blocked access or returned empty HTML"]
+                        existing_custom["ai_logs"] = [f"[ERROR] {err_msg}"]
                         lead.custom_data = existing_custom
                         from sqlalchemy.orm.attributes import flag_modified
                         flag_modified(lead, "custom_data")

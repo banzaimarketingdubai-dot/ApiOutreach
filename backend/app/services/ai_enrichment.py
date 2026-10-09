@@ -3,34 +3,53 @@ import logging
 import httpx
 import trafilatura
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 class AIEnrichmentService:
     @staticmethod
-    async def extract_website_text(url: str) -> str:
-        """Download web page and extract clean text content."""
+    async def extract_website_text(url: str) -> Tuple[str, str]:
+        """Download web page and extract clean text content. Returns (text, error_message)."""
         if not url:
-            return ""
+            return "", "Empty URL"
+            
         if not url.startswith("http://") and not url.startswith("https://"):
             url = "https://" + url
+            
+        # Social Media & CRM Filter
+        social_domains = ['instagram.com', 'facebook.com', 't.me', 'vk.com', 'linkedin.com', 'twitter.com', 'x.com', 'fresha.com', 'booksy.com', 'calendly.com', 'dikidi.net', 'wa.me']
+        if any(domain in url.lower() for domain in social_domains):
+            return "", f"Social Media or CRM link ignored. Specialized scraper required."
+            
         try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            # 1. Try Jina Reader API first (handles JS, Headless Chrome, Cloudflare)
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                jina_url = f"https://r.jina.ai/{url}"
+                resp = await client.get(jina_url)
+                if resp.status_code == 200 and len(resp.text) > 100:
+                    return resp.text[:4000], ""
+        except Exception as e:
+            logger.warning(f"Jina Reader failed for {url}: {e}")
+            
+        try:
+            # 2. Fallback to basic HTTP request if Jina fails
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
                 if resp.status_code == 200:
                     text = trafilatura.extract(resp.text)
                     if text:
-                        return text[:3000] # Limit to top 3000 chars per site
-                    # Fallback to BeautifulSoup text
+                        return text[:4000], ""
                     soup = BeautifulSoup(resp.text, 'html.parser')
                     for script in soup(["script", "style", "nav", "footer"]):
                         script.decompose()
-                    return soup.get_text(separator=' ', strip=True)[:3000]
+                    return soup.get_text(separator=' ', strip=True)[:4000], ""
+                return "", f"Website returned status code {resp.status_code}"
         except Exception as e:
-            logger.warning(f"Failed to extract website text for {url}: {e}")
-        return ""
+            return "", f"Connection failed or Timeout: {str(e)}"
+            
+        return "", "Unknown extraction error"
 
     @staticmethod
     async def batch_enrich_sites(
