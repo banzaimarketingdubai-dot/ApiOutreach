@@ -177,6 +177,13 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == wa))
                         if not existing.scalars().first():
                             db.add(Contact(lead_id=target_lead.id, contact_type="whatsapp", contact_value=wa))
+                            
+                    # Extract t.me links
+                    tg_links = set(re.findall(r't\.me/([a-zA-Z0-9_]+)', item["text"]))
+                    for tg in tg_links:
+                        existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == tg))
+                        if not existing.scalars().first():
+                            db.add(Contact(lead_id=target_lead.id, contact_type="telegram", contact_value=tg))
                     
                 await db.commit()
                 # Cooldown to respect Gemini 15 RPM limits

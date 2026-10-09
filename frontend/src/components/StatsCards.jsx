@@ -61,15 +61,15 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 
       isActive: filters.has_website === true
     },
     {
-      title: 'WhatsApp Verified',
-      value: stats.whatsapp || 0,
-      change: 'Direct messenger outreach ready',
-      icon: MessageSquare,
-      color: 'from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20',
-      activeColor: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] bg-emerald-900/20',
-      filterKey: 'has_whatsapp',
-      onClick: () => toggleFilter('has_whatsapp'),
-      isActive: filters.has_whatsapp === true
+      title: 'Email Verified',
+      value: stats.email || 0,
+      change: 'Cold email sequencing ready',
+      icon: Mail,
+      color: 'from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/20',
+      activeColor: 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] bg-amber-900/20',
+      filterKey: 'has_email',
+      onClick: () => toggleFilter('has_email'),
+      isActive: filters.has_email === true
     },
     {
       title: 'Telegram Verified',
@@ -94,15 +94,15 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 
       isActive: filters.has_viber === true
     },
     {
-      title: 'Email Verified',
-      value: stats.email || 0,
-      change: 'Cold email sequencing ready',
-      icon: Mail,
-      color: 'from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/20',
-      activeColor: 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] bg-amber-900/20',
-      filterKey: 'has_email',
-      onClick: () => toggleFilter('has_email'),
-      isActive: filters.has_email === true
+      title: 'WhatsApp Verified',
+      value: stats.whatsapp || 0,
+      change: 'Direct messenger outreach ready',
+      icon: MessageSquare,
+      color: 'from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20',
+      activeColor: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] bg-emerald-900/20',
+      filterKey: 'has_whatsapp',
+      onClick: () => toggleFilter('has_whatsapp'),
+      isActive: filters.has_whatsapp === true
     },
     {
       title: 'Phone Numbers',
