@@ -1,7 +1,7 @@
 import React from 'react';
-import { Database, MessageSquare, Mail, Phone } from 'lucide-react';
+import { Database, MessageSquare, Mail, Phone, Globe } from 'lucide-react';
 
-export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0 }, filters, setFilters }) {
+export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0 }, filters, setFilters }) {
   
   const toggleFilter = (key) => {
     // If it's already true, clear it, otherwise set it to true (and clear the other contact filters to avoid conflicting empty sets, though they could be ANDed)
@@ -13,6 +13,7 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       has_whatsapp: key === 'has_whatsapp' ? !isActive : '',
       has_email: key === 'has_email' ? !isActive : '',
       has_phone: key === 'has_phone' ? !isActive : '',
+      has_website: key === 'has_website' ? !isActive : '',
       page: 1
     });
   };
@@ -26,8 +27,19 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20',
       activeColor: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-900/20',
       filterKey: 'all',
-      onClick: () => setFilters({...filters, has_whatsapp: '', has_email: '', has_phone: '', page: 1}),
-      isActive: !filters.has_whatsapp && !filters.has_email && !filters.has_phone
+      onClick: () => setFilters({...filters, has_whatsapp: '', has_email: '', has_phone: '', has_website: '', page: 1}),
+      isActive: !filters.has_whatsapp && !filters.has_email && !filters.has_phone && !filters.has_website
+    },
+    {
+      title: 'Websites Collected',
+      value: stats.website || 0,
+      change: 'Domains ready for AI enrichment',
+      icon: Globe,
+      color: 'from-cyan-500/20 to-cyan-600/5 text-cyan-400 border-cyan-500/20',
+      activeColor: 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] bg-cyan-900/20',
+      filterKey: 'has_website',
+      onClick: () => toggleFilter('has_website'),
+      isActive: filters.has_website === true
     },
     {
       title: 'WhatsApp Verified',

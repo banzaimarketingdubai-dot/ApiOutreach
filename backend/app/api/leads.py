@@ -32,11 +32,16 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
     phones = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "phone")))
     phone_val = phones.scalar_one()
 
+    # Websites
+    websites = await db.execute(select(func.count(Lead.id)).where(Lead.website != None))
+    website_val = websites.scalar_one()
+
     return {
         "total": total_val,
         "whatsapp": wa_val,
         "email": email_val,
-        "phone": phone_val
+        "phone": phone_val,
+        "website": website_val
     }
 
 @router.get("", response_model=dict)
