@@ -90,7 +90,7 @@ REVO Master Data
     )
 
 @router.post("/send")
-async def send_outreach_email(request: SendRequest, db: Session = Depends(get_db)):
+async def send_outreach_email(request: SendRequest, db: AsyncSession = Depends(get_db)):
     try:
         from app.models.vault import VaultKey
         from sqlalchemy import select
