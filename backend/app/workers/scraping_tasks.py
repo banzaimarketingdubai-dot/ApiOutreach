@@ -42,9 +42,9 @@ def run_campaign_scraping(self, campaign_id: str):
                 campaign.logs = new_logs
                 await db.commit()
 
+            ai_cfg = campaign.ai_config or {}
             await add_log("info", f"Started scraping for {len(ai_cfg.get('search_queries', []))} queries.")
 
-            ai_cfg = campaign.ai_config or {}
             queries = ai_cfg.get("search_queries", [f"Dental Clinic in {campaign.target_geo or 'Dubai'}"])
             max_places = ai_cfg.get("max_places", 50)
 
@@ -75,12 +75,15 @@ def run_campaign_scraping(self, campaign_id: str):
                             "language": "en"
                         }
                         run_res = client.actor(ACTOR_ID).call(run_input=run_input)
-                    dataset_id = run_res.get("defaultDatasetId") if isinstance(run_res, dict) else getattr(run_res, "default_dataset_id", None)
-                    if dataset_id:
-                        await add_log("info", f"Apify Actor finished. Dataset ID: {dataset_id}")
-                        for item in client.dataset(dataset_id).iterate_items():
-                            scraped_items.append(item)
-                        await add_log("success", f"Downloaded {len(scraped_items)} raw items from Apify.")
+                        dataset_id = run_res.get("defaultDatasetId") if isinstance(run_res, dict) else getattr(run_res, "default_dataset_id", None)
+                        if dataset_id:
+                            await add_log("info", f"Apify Actor finished. Dataset ID: {dataset_id}")
+                            for item in client.dataset(dataset_id).iterate_items():
+                                scraped_items.append(item)
+                            await add_log("success", f"Downloaded {len(scraped_items)} raw items from Apify.")
+                    else:
+                        await add_log("warning", "Scraping aborted because campaign was cancelled.")
+
                 except Exception as e:
                     logger.error(f"Apify call failed: {e}")
                     campaign.error_log = f"Apify error: {str(e)}"
