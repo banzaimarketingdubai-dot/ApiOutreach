@@ -11,6 +11,12 @@ export async function fetchLeads(params = {}) {
   return res.json();
 }
 
+export async function fetchStats() {
+  const res = await fetch(`${API_BASE}/leads/stats`);
+  if (!res.ok) throw new Error('Failed to fetch stats');
+  return res.json();
+}
+
 export async function generateAIStrategy(user_goal, geo, additional_notes) {
   const res = await fetch(`${API_BASE}/ai/strategy`, {
     method: 'POST',

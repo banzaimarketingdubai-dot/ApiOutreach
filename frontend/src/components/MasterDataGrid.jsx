@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud } from 'lucide-react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud, Send } from 'lucide-react';
 import { getExportCsvUrl } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
+import OutreachModal from './OutreachModal';
 
 export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh, pagination = { total: 0, total_pages: 1, page: 1 } }) {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
+  const [outreachLead, setOutreachLead] = useState(null);
 
   const handleSort = (column) => {
     if (filters.sort_by === column) {
@@ -234,8 +236,19 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-right text-slate-400 text-[11px] group-hover:text-white">
-                      Inspect →
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end space-x-3">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setOutreachLead(lead); }}
+                          className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-lg transition-colors group-hover:border-blue-500/60"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold">Draft Email</span>
+                        </button>
+                        <span className="text-slate-400 text-[11px] group-hover:text-white">
+                          Inspect →
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -282,6 +295,13 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
         <CRMExportModal 
           leads={leads}
           onClose={() => setCrmModalOpen(false)}
+        />
+      )}
+
+      {outreachLead && (
+        <OutreachModal 
+          lead={outreachLead}
+          onClose={() => setOutreachLead(null)}
         />
       )}
 

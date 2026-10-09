@@ -13,11 +13,39 @@ from app.services.entity_resolution import LeadMergerService
 
 router = APIRouter()
 
+@router.get("/stats")
+async def get_leads_stats(db: AsyncSession = Depends(get_db)):
+    # Simple count of leads having specific contacts
+    # Total
+    total = await db.execute(select(func.count(Lead.id)))
+    total_val = total.scalar_one()
+
+    # WhatsApps
+    wa = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "whatsapp")))
+    wa_val = wa.scalar_one()
+
+    # Emails
+    emails = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "email")))
+    email_val = emails.scalar_one()
+    
+    # Phones
+    phones = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "phone")))
+    phone_val = phones.scalar_one()
+
+    return {
+        "total": total_val,
+        "whatsapp": wa_val,
+        "email": email_val,
+        "phone": phone_val
+    }
+
 @router.get("", response_model=dict)
 async def list_leads(
     niche: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     has_whatsapp: Optional[bool] = Query(None),
+    has_email: Optional[bool] = Query(None),
+    has_phone: Optional[bool] = Query(None),
     has_website: Optional[bool] = Query(None),
     min_score: Optional[int] = Query(None),
     min_rating: Optional[float] = Query(None),
@@ -57,6 +85,13 @@ async def list_leads(
             Lead.website.ilike(f"%{search}%")
         ))
 
+    if has_whatsapp is True:
+        filters.append(Lead.contacts.any(Contact.contact_type == "whatsapp"))
+    if has_email is True:
+        filters.append(Lead.contacts.any(Contact.contact_type == "email"))
+    if has_phone is True:
+        filters.append(Lead.contacts.any(Contact.contact_type == "phone"))
+
     if filters:
         stmt = stmt.where(and_(*filters))
 
@@ -77,17 +112,6 @@ async def list_leads(
     stmt = stmt.offset(offset).limit(page_size)
     res = await db.execute(stmt)
     leads = res.scalars().all()
-
-    # Filter WhatsApp in Python or via join if requested
-    if has_whatsapp is not None:
-        filtered_leads = []
-        for lead in leads:
-            wa_contacts = [c for c in lead.contacts if c.contact_type == "whatsapp"]
-            if has_whatsapp and wa_contacts:
-                filtered_leads.append(lead)
-            elif not has_whatsapp and not wa_contacts:
-                filtered_leads.append(lead)
-        leads = filtered_leads
 
     lead_responses = [LeadResponse.model_validate(l) for l in leads]
 

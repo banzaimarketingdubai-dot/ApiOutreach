@@ -7,7 +7,7 @@ import AIStrategistModal from './components/AIStrategistModal';
 import LeadDrawer from './components/LeadDrawer';
 import MergeCenter from './components/MergeCenter';
 import AdminPanel from './components/AdminPanel';
-import { fetchLeads, fetchCampaigns } from './services/api';
+import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('leads'); // 'leads' or 'builder'
@@ -17,7 +17,8 @@ export default function App() {
   const [globalCampaignId, setGlobalCampaignId] = useState('');
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1 });
+  const [stats, setStats] = useState({ total: 0, whatsapp: 0, email: 0, phone: 0 });
+  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, has_whatsapp: '', has_email: '', has_phone: '' });
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
   const loadLeads = async () => {
@@ -41,12 +42,22 @@ export default function App() {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const data = await fetchStats();
+      setStats(data || { total: 0, whatsapp: 0, email: 0, phone: 0 });
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
   useEffect(() => {
     loadLeads();
   }, [filters, globalCampaignId]);
 
   useEffect(() => {
     loadCampaigns();
+    loadStats();
   }, []);
 
   return (
@@ -66,7 +77,12 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
         
         {/* KPI Cards */}
-        <StatsCards leadsCount={leads.length} campaignsCount={campaigns.length} />
+        <StatsCards 
+          stats={stats}
+          campaignsCount={campaigns.length}
+          filters={filters}
+          setFilters={setFilters}
+        />
 
         {/* Tab Views */}
         {activeTab === 'leads' && (

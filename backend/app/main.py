@@ -14,6 +14,7 @@ from app.api.export import router as export_router
 from app.api.apify import router as apify_router
 from app.api.settings import router as settings_router
 from app.api.templates import router as templates_router
+from app.api.outreach import router as outreach_router
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=[
 app.include_router(apify_router, prefix=f"{settings.API_V1_STR}/apify", tags=["Apify Account"])
 app.include_router(settings_router, prefix=f"{settings.API_V1_STR}/settings", tags=["Settings"])
 app.include_router(templates_router, prefix=f"{settings.API_V1_STR}/templates", tags=["Templates"])
+app.include_router(outreach_router, prefix=f"{settings.API_V1_STR}/outreach", tags=["Outreach"])
 
 @app.get("/")
 async def root():
