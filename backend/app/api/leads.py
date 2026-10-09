@@ -379,3 +379,35 @@ async def merge_lead(
     await db.commit()
     
     return {"message": "Merged successfully", "target_id": tgt_lead.id}
+
+class CheckMessengersRequest(BaseModel):
+    lead_ids: List[UUID]
+
+@router.post("/check_messengers")
+async def check_messengers(
+    body: CheckMessengersRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from sqlalchemy import select, cast, String
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.services.messenger_checker import verify_messenger_availability
+
+    stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in body.lead_ids]))
+    res = await db.execute(stmt)
+    leads = res.scalars().all()
+
+    count = 0
+    for lead in leads:
+        if lead.phone:
+            info = verify_messenger_availability(lead.phone)
+            existing = dict(lead.custom_data) if lead.custom_data else {}
+            existing["telegram_available"] = info.get("telegram_available", False)
+            existing["whatsapp_available"] = info.get("whatsapp_available", False)
+            existing["viber_available"] = info.get("viber_available", False)
+            lead.custom_data = existing
+            flag_modified(lead, "custom_data")
+            count += 1
+
+    await db.commit()
+    return {"message": f"Checked messengers for {count} leads"}
