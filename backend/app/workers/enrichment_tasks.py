@@ -118,6 +118,7 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                 
                 import re
                 from app.models.contact import Contact
+                from app.services.messenger_checker import verify_messenger_availability
                 for item in site_batches:
                     lead_id = item["lead_id"]
                     l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
@@ -137,6 +138,27 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         existing_custom["ai_logs"].append(f"[WARNING] API Rate limit or parse failure for this batch.")
                         
                     existing_custom["enrichment_status"] = "completed"
+                    
+                    # Auto-Check Messengers during enrichment
+                    phone_to_check = target_lead.phone
+                    if not phone_to_check:
+                        c_res = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_type == "phone"))
+                        first_phone = c_res.scalars().first()
+                        if first_phone:
+                            phone_to_check = first_phone.contact_value
+
+                    if phone_to_check:
+                        try:
+                            info = verify_messenger_availability(phone_to_check)
+                            existing_custom["telegram_available"] = info.get("telegram_available", False)
+                            existing_custom["whatsapp_available"] = info.get("whatsapp_available", False)
+                            existing_custom["viber_available"] = info.get("viber_available", False)
+                            if "ai_logs" not in existing_custom:
+                                existing_custom["ai_logs"] = []
+                            existing_custom["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone_to_check}")
+                        except Exception as e:
+                            logger.error(f"Messenger check failed for {phone_to_check}: {e}")
+                            
                     target_lead.custom_data = existing_custom
                     from sqlalchemy.orm.attributes import flag_modified
                     flag_modified(target_lead, "custom_data")

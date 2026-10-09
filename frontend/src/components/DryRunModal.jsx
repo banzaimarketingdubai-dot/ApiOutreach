@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Loader2, X } from 'lucide-react';
 import { dryRunAI } from '../services/api';
-
 export default function DryRunModal({ selectedLeads, onClose }) {
-  const [prompt, setPrompt] = useState('Hi {{company_name}}, I see you are located in {{city}}. We would love to help you.');
+  const [prompt, setPrompt] = useState('Hi team at {{company_name}},\n\nI noticed you operate in the {{business_type}} space in {{city}}. We specialize in helping companies like yours scale their operations efficiently.\n\nLet me know if you would be open to a quick chat next week to discuss potential synergies.\n\nBest regards');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
 
@@ -21,8 +21,8 @@ export default function DryRunModal({ selectedLeads, onClose }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-[600px] max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
         <div className="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
           <h3 className="font-bold text-white flex items-center space-x-2">
@@ -74,6 +74,7 @@ export default function DryRunModal({ selectedLeads, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

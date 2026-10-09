@@ -1,7 +1,7 @@
 import React from 'react';
-import { Database, MessageSquare, Mail, Phone, Globe, Sparkles } from 'lucide-react';
+import { Database, MessageSquare, Mail, Phone, Globe, Sparkles, Send, PhoneCall } from 'lucide-react';
 
-export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0, enrichment_failed: 0 }, filters, setFilters }) {
+export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0, enrichment_failed: 0 }, filters, setFilters }) {
   
   const toggleFilter = (key) => {
     // If it's already true, clear it, otherwise set it to true (and clear the other contact filters to avoid conflicting empty sets, though they could be ANDed)
@@ -12,6 +12,8 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
     setFilters({
       ...filters,
       has_whatsapp: key === 'has_whatsapp' ? !isActive : '',
+      has_telegram: key === 'has_telegram' ? !isActive : '',
+      has_viber: key === 'has_viber' ? !isActive : '',
       has_email: key === 'has_email' ? !isActive : '',
       has_phone: key === 'has_phone' ? !isActive : '',
       has_website: key === 'has_website' ? !isActive : '',
@@ -33,8 +35,8 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20',
       activeColor: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-900/20',
       filterKey: 'all',
-      onClick: () => setFilters({...filters, has_whatsapp: '', has_email: '', has_phone: '', has_website: '', enrichment_status: '', page: 1}),
-      isActive: !filters.has_whatsapp && !filters.has_email && !filters.has_phone && !filters.has_website && !filters.enrichment_status
+      onClick: () => setFilters({...filters, has_whatsapp: '', has_telegram: '', has_viber: '', has_email: '', has_phone: '', has_website: '', enrichment_status: '', page: 1}),
+      isActive: !filters.has_whatsapp && !filters.has_telegram && !filters.has_viber && !filters.has_email && !filters.has_phone && !filters.has_website && !filters.enrichment_status
     },
     {
       title: 'AI Enrichment Queue',
@@ -70,6 +72,28 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       isActive: filters.has_whatsapp === true
     },
     {
+      title: 'Telegram Verified',
+      value: stats.telegram || 0,
+      change: 'Direct messenger outreach',
+      icon: Send,
+      color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20',
+      activeColor: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-900/20',
+      filterKey: 'has_telegram',
+      onClick: () => toggleFilter('has_telegram'),
+      isActive: filters.has_telegram === true
+    },
+    {
+      title: 'Viber Verified',
+      value: stats.viber || 0,
+      change: 'Direct messenger outreach',
+      icon: PhoneCall,
+      color: 'from-indigo-500/20 to-indigo-600/5 text-indigo-400 border-indigo-500/20',
+      activeColor: 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)] bg-indigo-900/20',
+      filterKey: 'has_viber',
+      onClick: () => toggleFilter('has_viber'),
+      isActive: filters.has_viber === true
+    },
+    {
       title: 'Email Verified',
       value: stats.email || 0,
       change: 'Cold email sequencing ready',
@@ -94,14 +118,14 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory gap-4 mb-2 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {cards.map((item, index) => {
         const Icon = item.icon;
         return (
           <div
             key={index}
             onClick={item.onClick}
-            className={`p-4 rounded-2xl cursor-pointer bg-slate-900/60 border ${item.isActive ? item.activeColor : item.color} backdrop-blur-md relative overflow-hidden group hover:border-slate-500 transition-all`}
+            className={`flex-none w-[280px] md:w-auto snap-center p-4 rounded-2xl cursor-pointer bg-slate-900/60 border ${item.isActive ? item.activeColor : item.color} backdrop-blur-md relative overflow-hidden group hover:border-slate-500 transition-all`}
           >
             <div className="flex items-center justify-between">
               <div>

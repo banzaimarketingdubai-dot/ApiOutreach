@@ -21,8 +21,31 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
     total_val = total.scalar_one()
 
     # WhatsApps
-    wa = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "whatsapp")))
+    wa = await db.execute(select(func.count(Lead.id)).where(
+        or_(
+            Lead.contacts.any(Contact.contact_type == "whatsapp"),
+            Lead.custom_data['whatsapp_available'].astext == 'true'
+        )
+    ))
     wa_val = wa.scalar_one()
+
+    # Telegrams
+    tg = await db.execute(select(func.count(Lead.id)).where(
+        or_(
+            Lead.contacts.any(Contact.contact_type == "telegram"),
+            Lead.custom_data['telegram_available'].astext == 'true'
+        )
+    ))
+    tg_val = tg.scalar_one()
+
+    # Vibers
+    vb = await db.execute(select(func.count(Lead.id)).where(
+        or_(
+            Lead.contacts.any(Contact.contact_type == "viber"),
+            Lead.custom_data['viber_available'].astext == 'true'
+        )
+    ))
+    vb_val = vb.scalar_one()
 
     # Emails
     emails = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "email")))
@@ -57,6 +80,8 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
     return {
         "total": total_val,
         "whatsapp": wa_val,
+        "telegram": tg_val,
+        "viber": vb_val,
         "email": email_val,
         "phone": phone_val,
         "website": website_val,
@@ -65,11 +90,75 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
         "enrichment_failed": enrich_fail_val
     }
 
+def apply_lead_filters(stmt, filters_dict: dict):
+    from sqlalchemy import and_, or_
+    filters = []
+    
+    niche = filters_dict.get("niche")
+    city = filters_dict.get("city")
+    has_website = filters_dict.get("has_website")
+    min_score = filters_dict.get("min_score")
+    min_rating = filters_dict.get("min_rating")
+    max_rating = filters_dict.get("max_rating")
+    campaign_id = filters_dict.get("campaign_id")
+    search = filters_dict.get("search")
+    has_whatsapp = filters_dict.get("has_whatsapp")
+    has_telegram = filters_dict.get("has_telegram")
+    has_viber = filters_dict.get("has_viber")
+    has_email = filters_dict.get("has_email")
+    has_phone = filters_dict.get("has_phone")
+    enrichment_status = filters_dict.get("enrichment_status")
+
+    if niche: filters.append(Lead.business_type.ilike(f"%{niche}%"))
+    if city: filters.append(Lead.city.ilike(f"%{city}%"))
+    if has_website is True: filters.append(and_(Lead.website.isnot(None), Lead.website != ""))
+    elif has_website is False: filters.append(or_(Lead.website.is_(None), Lead.website == ""))
+    if min_score is not None and min_score != "": filters.append(Lead.revo_score >= int(min_score))
+    if min_rating is not None and min_rating != "": filters.append(Lead.rating >= float(min_rating))
+    if max_rating is not None and max_rating != "": filters.append(Lead.rating <= float(max_rating))
+    if campaign_id: filters.append(Lead.campaign_id == campaign_id)
+    if search: filters.append(or_(Lead.company_name.ilike(f"%{search}%"), Lead.address.ilike(f"%{search}%"), Lead.website.ilike(f"%{search}%")))
+
+    if has_whatsapp is True: 
+        filters.append(or_(
+            Lead.contacts.any(Contact.contact_type == "whatsapp"),
+            Lead.custom_data['whatsapp_available'].astext == 'true'
+        ))
+    if has_telegram is True: 
+        filters.append(or_(
+            Lead.contacts.any(Contact.contact_type == "telegram"),
+            Lead.custom_data['telegram_available'].astext == 'true'
+        ))
+    if has_viber is True: 
+        filters.append(or_(
+            Lead.contacts.any(Contact.contact_type == "viber"),
+            Lead.custom_data['viber_available'].astext == 'true'
+        ))
+    if has_email is True: filters.append(Lead.contacts.any(Contact.contact_type == "email"))
+    if has_phone is True: filters.append(Lead.contacts.any(Contact.contact_type == "phone"))
+
+    if enrichment_status:
+        from sqlalchemy import cast, String, or_
+        if enrichment_status == "none":
+            filters.append(or_(
+                Lead.custom_data.is_(None),
+                Lead.custom_data['enrichment_status'].astext.is_(None),
+                Lead.custom_data['enrichment_status'].astext == ""
+            ))
+        else:
+            filters.append(Lead.custom_data['enrichment_status'].astext == enrichment_status)
+        
+    if filters:
+        stmt = stmt.where(and_(*filters))
+    return stmt
+
 @router.get("", response_model=dict)
 async def list_leads(
     niche: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     has_whatsapp: Optional[bool] = Query(None),
+    has_telegram: Optional[bool] = Query(None),
+    has_viber: Optional[bool] = Query(None),
     has_email: Optional[bool] = Query(None),
     has_phone: Optional[bool] = Query(None),
     has_website: Optional[bool] = Query(None),
@@ -87,51 +176,15 @@ async def list_leads(
     current_user: User = Depends(get_current_user)
 ):
     stmt = select(Lead)
-    filters = []
-
-    if niche:
-        filters.append(Lead.business_type.ilike(f"%{niche}%"))
-    if city:
-        filters.append(Lead.city.ilike(f"%{city}%"))
-    if has_website is True:
-        filters.append(and_(Lead.website.isnot(None), Lead.website != ""))
-    elif has_website is False:
-        filters.append(or_(Lead.website.is_(None), Lead.website == ""))
-    if min_score is not None:
-        filters.append(Lead.revo_score >= min_score)
-    if min_rating is not None:
-        filters.append(Lead.rating >= min_rating)
-    if max_rating is not None:
-        filters.append(Lead.rating <= max_rating)
-    if campaign_id:
-        filters.append(Lead.campaign_id == campaign_id)
-    if search:
-        filters.append(or_(
-            Lead.company_name.ilike(f"%{search}%"),
-            Lead.address.ilike(f"%{search}%"),
-            Lead.website.ilike(f"%{search}%")
-        ))
-
-    if has_whatsapp is True:
-        filters.append(Lead.contacts.any(Contact.contact_type == "whatsapp"))
-    if has_email is True:
-        filters.append(Lead.contacts.any(Contact.contact_type == "email"))
-    if has_phone is True:
-        filters.append(Lead.contacts.any(Contact.contact_type == "phone"))
-
-    if enrichment_status:
-        from sqlalchemy import cast, String, or_
-        if enrichment_status == "none":
-            filters.append(or_(
-                Lead.custom_data.is_(None),
-                Lead.custom_data['enrichment_status'].astext.is_(None),
-                Lead.custom_data['enrichment_status'].astext == ""
-            ))
-        else:
-            filters.append(Lead.custom_data['enrichment_status'].astext == enrichment_status)
-        
-    if filters:
-        stmt = stmt.where(and_(*filters))
+    filters_dict = {
+        "niche": niche, "city": city, "has_website": has_website,
+        "min_score": min_score, "min_rating": min_rating, "max_rating": max_rating,
+        "search": search, "campaign_id": campaign_id,
+        "has_whatsapp": has_whatsapp, "has_telegram": has_telegram, "has_viber": has_viber,
+        "has_email": has_email, "has_phone": has_phone,
+        "enrichment_status": enrichment_status
+    }
+    stmt = apply_lead_filters(stmt, filters_dict)
 
     # Apply sorting
     sort_column = getattr(Lead, sort_by, Lead.created_at)
@@ -280,8 +333,17 @@ async def trigger_targeted_enrichment(
     current_user: User = Depends(get_current_user)
 ):
     lead_ids = body.get("lead_ids", [])
+    select_all = body.get("select_all", False)
+    
+    from sqlalchemy import cast, String
+    if select_all:
+        filters = body.get("filters", {})
+        stmt = apply_lead_filters(select(Lead.id), filters)
+        res = await db.execute(stmt)
+        lead_ids = [str(i) for i in res.scalars().all()]
+        
     if not lead_ids:
-        raise HTTPException(status_code=400, detail="lead_ids array is required")
+        raise HTTPException(status_code=400, detail="No leads found or provided")
         
     # Set status to in_progress immediately
     from sqlalchemy import cast, String
@@ -380,12 +442,14 @@ async def merge_lead(
     
     return {"message": "Merged successfully", "target_id": tgt_lead.id}
 
-class CheckMessengersRequest(BaseModel):
-    lead_ids: List[UUID]
+class ActionRequest(BaseModel):
+    lead_ids: Optional[List[UUID]] = None
+    select_all: Optional[bool] = False
+    filters: Optional[dict] = None
 
 @router.post("/check_messengers")
 async def check_messengers(
-    body: CheckMessengersRequest,
+    body: ActionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -393,7 +457,11 @@ async def check_messengers(
     from sqlalchemy.orm.attributes import flag_modified
     from app.services.messenger_checker import verify_messenger_availability
 
-    stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in body.lead_ids]))
+    if body.select_all:
+        stmt = apply_lead_filters(select(Lead), body.filters or {})
+    else:
+        stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in (body.lead_ids or [])]))
+        
     res = await db.execute(stmt)
     leads = res.scalars().all()
 
@@ -414,14 +482,18 @@ async def check_messengers(
 
 @router.post("/export_lead_radar")
 async def export_lead_radar(
-    body: CheckMessengersRequest,
+    body: ActionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     from sqlalchemy import select, cast, String
     from fastapi.responses import JSONResponse
     
-    stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in body.lead_ids]))
+    if body.select_all:
+        stmt = apply_lead_filters(select(Lead), body.filters or {})
+    else:
+        stmt = select(Lead).where(cast(Lead.id, String).in_([str(id) for id in (body.lead_ids or [])]))
+        
     res = await db.execute(stmt)
     leads = res.scalars().all()
 

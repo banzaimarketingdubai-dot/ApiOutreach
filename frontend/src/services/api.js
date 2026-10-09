@@ -11,21 +11,21 @@ export async function fetchLeads(params = {}) {
   return res.json();
 }
 
-export async function checkMessengers(lead_ids) {
+export async function checkMessengers(payload) {
   const res = await fetch(`${API_BASE}/leads/check_messengers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lead_ids })
+    body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error('Failed to check messengers');
   return res.json();
 }
 
-export async function exportLeadRadar(lead_ids) {
+export async function exportLeadRadar(payload) {
   const res = await fetch(`${API_BASE}/leads/export_lead_radar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lead_ids })
+    body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error('Failed to export to Lead Radar');
   return res.json();

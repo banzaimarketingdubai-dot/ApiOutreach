@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Cloud, Loader2, X, Check, Server, Webhook } from 'lucide-react';
 
 export default function CRMExportModal({ leads = [], onClose }) {
@@ -35,8 +36,8 @@ export default function CRMExportModal({ leads = [], onClose }) {
   };
 
   if (success) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-sm">
         <div className="bg-slate-900 border border-slate-700 rounded-2xl w-[400px] p-8 text-center shadow-2xl">
           <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/30">
             <Check className="w-8 h-8 text-green-400" />
@@ -50,12 +51,13 @@ export default function CRMExportModal({ leads = [], onClose }) {
             Done
           </button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-[700px] max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
         <div className="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
           <h3 className="font-bold text-white flex items-center space-x-2">
@@ -120,6 +122,7 @@ export default function CRMExportModal({ leads = [], onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

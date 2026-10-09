@@ -13,10 +13,10 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
 
   return (
     <header className="border-b border-slate-800 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between overflow-x-auto gap-4 hide-scrollbar snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
         {/* Brand & Workspace Selector */}
-        <div className="flex items-center space-x-4 lg:space-x-6 flex-shrink-0">
+        <div className="flex items-center space-x-4 lg:space-x-6 flex-shrink-0 snap-center">
           <div className="flex items-center space-x-3 whitespace-nowrap">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20 flex-shrink-0">
               <Database className="w-5 h-5 text-white" />
@@ -44,7 +44,7 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
         </div>
 
         {/* Center/Right: Apify Status Badge + Nav Tabs + Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-shrink-0 snap-center">
 
           {/* Apify Balance Widget */}
           {apifyData && apifyData.connected && (

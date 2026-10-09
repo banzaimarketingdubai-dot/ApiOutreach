@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Send, X, FileText, CheckCircle, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -65,8 +66,8 @@ export default function OutreachModal({ lead, onClose }) {
 
   if (!lead) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
@@ -179,6 +180,7 @@ export default function OutreachModal({ lead, onClose }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

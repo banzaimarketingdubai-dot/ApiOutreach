@@ -17,8 +17,8 @@ export default function App() {
   const [globalCampaignId, setGlobalCampaignId] = useState('');
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [stats, setStats] = useState({ total: 0, whatsapp: 0, email: 0, phone: 0 });
-  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, has_whatsapp: '', has_email: '', has_phone: '' });
+  const [stats, setStats] = useState({ total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
+  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, has_whatsapp: '', has_telegram: '', has_viber: '', has_email: '', has_phone: '' });
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
   const loadLeads = async () => {
@@ -45,7 +45,7 @@ export default function App() {
   const loadStats = async () => {
     try {
       const data = await fetchStats();
-      setStats(data || { total: 0, whatsapp: 0, email: 0, phone: 0 });
+      setStats(data || { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
     } catch (err) {
       console.error('Error fetching stats:', err);
     }
@@ -53,6 +53,14 @@ export default function App() {
 
   useEffect(() => {
     loadLeads();
+
+    // Auto-refresh (polling) for real-time AI Queue updates
+    const intervalId = setInterval(() => {
+      loadLeads();
+      loadStats();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
   }, [filters, globalCampaignId]);
 
   useEffect(() => {

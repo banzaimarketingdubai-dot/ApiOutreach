@@ -3,10 +3,11 @@ import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, Exte
 import { getExportCsvUrl, checkMessengers, exportLeadRadar } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
-import OutreachModal from './OutreachModal';
+import OmnichannelOutreachModal from './OmnichannelOutreachModal';
 
 export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh, pagination = { total: 0, total_pages: 1, page: 1 } }) {
   const [selectedLeads, setSelectedLeads] = useState([]);
+  const [selectAllGlobal, setSelectAllGlobal] = useState(false);
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
   const [outreachLead, setOutreachLead] = useState(null);
@@ -33,6 +34,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
   const toggleLeadSelection = (lead, e) => {
     e.stopPropagation();
+    setSelectAllGlobal(false);
     if (selectedLeads.find(l => l.id === lead.id)) {
       setSelectedLeads(selectedLeads.filter(l => l.id !== lead.id));
     } else {
@@ -52,16 +54,23 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
     } else {
       const visibleIds = new Set(leads.map(l => l.id));
       setSelectedLeads(selectedLeads.filter(l => !visibleIds.has(l.id)));
+      setSelectAllGlobal(false);
     }
   };
 
+  const selectedCount = selectAllGlobal ? pagination.total : selectedLeads.length;
+
   const handleCheckMessengers = async () => {
-    if (selectedLeads.length === 0) return;
+    if (selectedCount === 0) return;
     setIsCheckingMessengers(true);
     try {
-      await checkMessengers(selectedLeads.map(l => l.id));
+      const payload = selectAllGlobal 
+        ? { select_all: true, filters } 
+        : { lead_ids: selectedLeads.map(l => l.id) };
+      await checkMessengers(payload);
       onRefresh(); // Refresh table
       setSelectedLeads([]);
+      setSelectAllGlobal(false);
     } catch (err) {
       console.error(err);
       alert('Failed to check messengers');
@@ -71,10 +80,13 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
   };
 
   const handleOutreachSync = async () => {
-    if (selectedLeads.length === 0) return;
+    if (selectedCount === 0) return;
     setIsSyncing(true);
     try {
-      const res = await exportLeadRadar(selectedLeads.map(l => l.id));
+      const payload = selectAllGlobal 
+        ? { select_all: true, filters } 
+        : { lead_ids: selectedLeads.map(l => l.id) };
+      const res = await exportLeadRadar(payload);
       const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -128,10 +140,14 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                       ? 'https://web-production-c4d98.up.railway.app/api/v1' 
                       : '/api/v1';
                       
+                    const payload = selectAllGlobal 
+                      ? { select_all: true, filters } 
+                      : { lead_ids: selectedLeads.map(l => l.id) };
+
                     const res = await fetch(`${API_BASE}/leads/tools/enrich`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ lead_ids: selectedLeads.map(l => l.id) })
+                      body: JSON.stringify(payload)
                     });
                     if (res.ok) {
                       setSelectedLeads([]);
@@ -146,7 +162,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                 className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs font-semibold border border-purple-500/30 transition-all mr-2"
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>Deep AI Enrich ({selectedLeads.length})</span>
+                <span>Deep AI Enrich ({selectedCount})</span>
               </button>
             </>
           )}
@@ -211,9 +227,9 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
           <button
             onClick={handleOutreachSync}
-            disabled={isSyncing || selectedLeads.length === 0}
+            disabled={isSyncing || selectedCount === 0}
             className={`flex items-center px-4 py-2 text-xs font-semibold rounded-xl border transition-all ml-auto ${
-              isSyncing || selectedLeads.length === 0
+              isSyncing || selectedCount === 0
                 ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
                 : 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.6)]'
             }`}
@@ -224,9 +240,9 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
           <button
             onClick={handleCheckMessengers}
-            disabled={isCheckingMessengers || selectedLeads.length === 0}
+            disabled={isCheckingMessengers || selectedCount === 0}
             className={`flex items-center px-4 py-2 text-xs font-semibold rounded-xl border transition-all ml-auto ${
-              isCheckingMessengers || selectedLeads.length === 0
+              isCheckingMessengers || selectedCount === 0
                 ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
                 : 'bg-indigo-600/20 border-indigo-500/50 text-indigo-400 hover:bg-indigo-500 hover:text-white shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_-3px_rgba(99,102,241,0.6)]'
             }`}
@@ -253,6 +269,36 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
           </button>
         </div>
       </div>
+
+      {/* Smart Selection Banner */}
+      {selectedLeads.length > 0 && selectedLeads.length === leads.length && pagination.total > leads.length && (
+        <div className="bg-blue-900/40 border border-blue-500/30 rounded-xl p-3 text-sm text-center flex items-center justify-center space-x-2">
+          {!selectAllGlobal ? (
+            <>
+              <span className="text-blue-200">Все <strong>{selectedLeads.length}</strong> загруженных лидов на странице выделены.</span>
+              <button 
+                onClick={() => setSelectAllGlobal(true)}
+                className="text-blue-400 font-bold hover:underline"
+              >
+                Выделить все {pagination.total} лидов, подходящих под фильтр
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-blue-200">Все <strong>{pagination.total}</strong> лидов по этому фильтру выделены.</span>
+              <button 
+                onClick={() => {
+                  setSelectAllGlobal(false);
+                  setSelectedLeads([]);
+                }}
+                className="text-blue-400 font-bold hover:underline"
+              >
+                Снять выделение
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="overflow-x-auto rounded-2xl border border-slate-800">
@@ -456,7 +502,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
       )}
 
       {outreachLead && (
-        <OutreachModal 
+        <OmnichannelOutreachModal 
           lead={outreachLead}
           onClose={() => setOutreachLead(null)}
         />
