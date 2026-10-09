@@ -197,6 +197,16 @@ async def trigger_targeted_enrichment(
     if not lead_ids:
         raise HTTPException(status_code=400, detail="lead_ids array is required")
         
+    # Set status to in_progress immediately
+    from sqlalchemy import cast, String
+    leads_res = await db.execute(select(Lead).where(cast(Lead.id, String).in_(lead_ids)))
+    leads = leads_res.scalars().all()
+    for l in leads:
+        existing = l.custom_data or {}
+        existing["enrichment_status"] = "in_progress"
+        l.custom_data = existing
+    await db.commit()
+        
     from app.workers.enrichment_tasks import run_targeted_enrichment
     run_targeted_enrichment.delay(lead_ids, None)
     return {"status": "success", "message": f"Enrichment background task queued for {len(lead_ids)} leads"}

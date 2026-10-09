@@ -92,6 +92,12 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         "website": lead.website,
                         "text": text
                     })
+                else:
+                    # Mark as failed if no text could be extracted
+                    existing_custom = lead.custom_data or {}
+                    existing_custom["enrichment_status"] = "failed"
+                    lead.custom_data = existing_custom
+            await db.commit()
 
             batch_size = 5
             for i in range(0, len(site_batches), batch_size):
@@ -106,11 +112,12 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     target_lead = l_res.scalars().first()
                     if not target_lead: continue
                     
-                    # Store AI custom data
+                    # Store AI custom data and mark completed
+                    existing_custom = target_lead.custom_data or {}
                     if lead_id in extracted_results:
-                        existing_custom = target_lead.custom_data or {}
                         existing_custom.update(extracted_results[lead_id])
-                        target_lead.custom_data = existing_custom
+                    existing_custom["enrichment_status"] = "completed"
+                    target_lead.custom_data = existing_custom
                         
                     # Extract Emails via Regex
                     emails = set(re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', item["text"]))
