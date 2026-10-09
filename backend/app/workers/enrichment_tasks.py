@@ -85,8 +85,8 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
             if not leads:
                 return
 
-            # Process in batches of 5 to avoid memory blowup and update UI incrementally
-            batch_size = 5
+            # Process in batches of 25 to fully utilize Gemini's 1M token context window and reduce API RPM usage
+            batch_size = 25
             for i in range(0, len(leads), batch_size):
                 chunk_leads = leads[i:i + batch_size]
                 site_batches = []
