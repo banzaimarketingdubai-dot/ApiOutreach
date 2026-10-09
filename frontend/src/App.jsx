@@ -17,7 +17,7 @@ export default function App() {
   const [globalCampaignId, setGlobalCampaignId] = useState('');
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [filters, setFilters] = useState({ city: '', min_score: '', search: '' });
+  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '' });
 
   const loadLeads = async () => {
     try {

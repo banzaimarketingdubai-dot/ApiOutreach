@@ -20,6 +20,8 @@ async def list_leads(
     has_whatsapp: Optional[bool] = Query(None),
     has_website: Optional[bool] = Query(None),
     min_score: Optional[int] = Query(None),
+    min_rating: Optional[float] = Query(None),
+    max_rating: Optional[float] = Query(None),
     search: Optional[str] = Query(None),
     campaign_id: Optional[UUID] = Query(None),
     page: int = Query(1, ge=1),
@@ -40,6 +42,10 @@ async def list_leads(
         filters.append(or_(Lead.website.is_(None), Lead.website == ""))
     if min_score is not None:
         filters.append(Lead.revo_score >= min_score)
+    if min_rating is not None:
+        filters.append(Lead.rating >= min_rating)
+    if max_rating is not None:
+        filters.append(Lead.rating <= max_rating)
     if campaign_id:
         filters.append(Lead.campaign_id == campaign_id)
     if search:

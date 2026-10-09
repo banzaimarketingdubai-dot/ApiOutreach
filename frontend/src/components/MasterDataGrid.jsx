@@ -74,6 +74,31 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
             <option value="50">50+ (Medium Potential)</option>
           </select>
 
+          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-300">
+            <Star className="w-3.5 h-3.5 text-amber-500 mr-2" />
+            <input 
+              type="number" 
+              step="0.1" 
+              min="0" 
+              max="5"
+              placeholder="Min" 
+              value={filters.min_rating || ''} 
+              onChange={(e) => setFilters({ ...filters, min_rating: e.target.value })}
+              className="bg-transparent border-none w-12 focus:outline-none text-center"
+            />
+            <span className="text-slate-600 mx-1">-</span>
+            <input 
+              type="number" 
+              step="0.1" 
+              min="0" 
+              max="5"
+              placeholder="Max" 
+              value={filters.max_rating || ''} 
+              onChange={(e) => setFilters({ ...filters, max_rating: e.target.value })}
+              className="bg-transparent border-none w-12 focus:outline-none text-center"
+            />
+          </div>
+
           <button
             onClick={() => setCrmModalOpen(true)}
             disabled={leads.length === 0}
