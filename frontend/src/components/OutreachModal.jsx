@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, X, FileText, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { Send, X, FileText, CheckCircle, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
