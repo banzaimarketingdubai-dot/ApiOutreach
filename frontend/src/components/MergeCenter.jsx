@@ -66,7 +66,7 @@ export default function MergeCenter({ globalCampaignId }) {
         {duplicateGroups.map((group, gIdx) => (
           <div key={gIdx} className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
             <div className="bg-slate-800 px-4 py-2 border-b border-slate-700 text-sm font-semibold text-slate-300">
-              Match Group {gIdx + 1}: "{group[0]?.company_name.split(' ')[0]}" in {group[0]?.city}
+              Match Group {gIdx + 1}
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               {group.map((lead, lIdx) => (

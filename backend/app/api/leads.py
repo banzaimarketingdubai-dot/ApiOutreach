@@ -176,13 +176,24 @@ async def delete_lead(
     await db.delete(lead)
     await db.commit()
 
+@router.delete("/tools/clean_all", status_code=status.HTTP_204_NO_CONTENT)
+async def clean_all_leads(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.email != "admin@revo.ai":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from sqlalchemy import text
+    await db.execute(text("TRUNCATE TABLE leads CASCADE"))
+    await db.commit()
+
 @router.get("/tools/duplicates", response_model=List[List[LeadResponse]])
 async def get_suspected_duplicates(
     campaign_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Simple MVP duplicate detection: Group by first word of company_name in the same city
+    import re
     stmt = select(Lead)
     if campaign_id:
         stmt = stmt.where(Lead.campaign_id == campaign_id)
@@ -190,9 +201,22 @@ async def get_suspected_duplicates(
     all_leads = res.scalars().all()
     
     groups = {}
+    stop_words = {"the", "a", "an", "and", "or", "of", "in", "to", "for"}
     for l in all_leads:
         if not l.company_name: continue
-        key = (l.company_name.lower().split()[0], l.city)
+        words = [w.lower() for w in re.split(r'\W+', l.company_name) if w.lower() not in stop_words and len(w) > 1]
+        
+        # Priority 1: Phone match
+        phone_val = re.sub(r'\D', '', l.phone) if l.phone else None
+        
+        # Priority 2: Name + City match
+        if phone_val and len(phone_val) >= 7:
+            key = f"phone:{phone_val}"
+        else:
+            first_two = " ".join(words[:2]) if len(words) >= 2 else (words[0] if words else l.company_name.lower())
+            city_val = l.city.lower() if l.city else "unknown_city"
+            key = f"name_city:{first_two}:{city_val}"
+            
         if key not in groups:
             groups[key] = []
         groups[key].append(l)
