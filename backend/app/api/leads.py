@@ -329,13 +329,13 @@ async def restore_leads(
 @router.post("/tools/reset_enrichment")
 async def reset_enrichment_status(payload: dict, db: AsyncSession = Depends(get_db)):
     """Reset stuck in_progress status for selected leads."""
+    from sqlalchemy import cast, String
     lead_ids = payload.get("lead_ids", [])
     select_all = payload.get("select_all", False)
     filters = payload.get("filters", {})
 
     query = select(Lead)
     if select_all:
-        from app.api.leads import apply_lead_filters
         query = apply_lead_filters(query, filters)
     else:
         if not lead_ids:
