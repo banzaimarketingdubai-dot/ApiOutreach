@@ -11,6 +11,16 @@ export async function fetchLeads(params = {}) {
   return res.json();
 }
 
+export async function checkMessengers(lead_ids) {
+  const res = await fetch(`${API_BASE}/leads/check_messengers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_ids })
+  });
+  if (!res.ok) throw new Error('Failed to check messengers');
+  return res.json();
+}
+
 export async function fetchStats() {
   const res = await fetch(`${API_BASE}/leads/stats`);
   if (!res.ok) throw new Error('Failed to fetch stats');
