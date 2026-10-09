@@ -157,6 +157,42 @@ async def pause_campaign(
         import traceback
         return {"error": str(e), "traceback": traceback.format_exc()}
 
+@router.post("/tools/migrate_kyiv")
+async def migrate_kyiv(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import update, or_
+    from app.models.lead import Lead
+    
+    # Check if Campaign "Beauty Kyiv" exists
+    result = await db.execute(select(Campaign).where(Campaign.campaign_name == "Beauty Kyiv"))
+    kyiv_camp = result.scalars().first()
+    
+    if not kyiv_camp:
+        kyiv_camp = Campaign(
+            campaign_name="Beauty Kyiv",
+            status=CampaignStatus.PENDING,
+            ai_config={
+                "custom_variables": [
+                    {"key": "has_online_booking", "description": "Does the site have online booking?"},
+                    {"key": "uses_crm_chat", "description": "Does the site use WhatsApp or Live Chat widget?"}
+                ]
+            }
+        )
+        db.add(kyiv_camp)
+        await db.commit()
+        await db.refresh(kyiv_camp)
+        
+    stmt = update(Lead).where(
+        or_(
+            Lead.city.ilike("%Kyiv%"),
+            Lead.address.ilike("%Kyiv%"),
+            Lead.address.ilike("%Київ%")
+        )
+    ).values(campaign_id=kyiv_camp.id)
+    
+    res = await db.execute(stmt)
+    await db.commit()
+    return {"message": f"Successfully moved {res.rowcount} leads to Beauty Kyiv", "campaign_id": kyiv_camp.id}
+
 @router.post("/{campaign_id}/resume")
 async def resume_campaign(
     campaign_id: UUID,

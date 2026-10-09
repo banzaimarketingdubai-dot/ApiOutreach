@@ -38,7 +38,7 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
           >
             <option value="">Global (All Projects)</option>
             {campaigns.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.campaign_name}</option>
             ))}
           </select>
         </div>
