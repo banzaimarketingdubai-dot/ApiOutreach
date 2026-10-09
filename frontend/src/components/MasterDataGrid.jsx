@@ -98,8 +98,8 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                       body: JSON.stringify({ lead_ids: selectedLeads.map(l => l.id) })
                     });
                     if (res.ok) {
-                      alert('Targeted background enrichment queued successfully!');
                       setSelectedLeads([]);
+                      if (onRefresh) onRefresh();
                     } else {
                       alert('Failed to start enrichment');
                     }
