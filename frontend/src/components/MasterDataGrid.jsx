@@ -117,35 +117,35 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
           <select
             value={filters.city || ''}
-            onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, city: e.target.value, page: 1, page_size: e.target.value ? 500 : 50 })}
             className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
           >
             <option value="">All GEOs</option>
-            <option value="Dubai">Dubai</option>
-            <option value="Kyiv">Kyiv</option>
-            <option value="Almaty">Almaty</option>
+            <option value="Dubai">Dubai {filters.city === 'Dubai' ? `(${pagination.total})` : ''}</option>
+            <option value="Kyiv">Kyiv {filters.city === 'Kyiv' ? `(${pagination.total})` : ''}</option>
+            <option value="Almaty">Almaty {filters.city === 'Almaty' ? `(${pagination.total})` : ''}</option>
           </select>
 
           <select
             value={filters.min_score || ''}
-            onChange={(e) => setFilters({ ...filters, min_score: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, min_score: e.target.value, page: 1, page_size: e.target.value ? 500 : 50 })}
             className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
           >
             <option value="">Any Revo Score</option>
-            <option value="80">80+ (High Potential)</option>
-            <option value="50">50+ (Medium Potential)</option>
+            <option value="80">80+ (High Potential) {filters.min_score === '80' ? `(${pagination.total})` : ''}</option>
+            <option value="50">50+ (Medium Potential) {filters.min_score === '50' ? `(${pagination.total})` : ''}</option>
           </select>
 
           <select
             value={filters.enrichment_status || ''}
-            onChange={(e) => setFilters({ ...filters, enrichment_status: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, enrichment_status: e.target.value, page: 1, page_size: e.target.value ? 500 : 50 })}
             className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
           >
             <option value="">Any AI Status</option>
-            <option value="none">Not Enriched Yet</option>
-            <option value="in_progress">AI Enriching...</option>
-            <option value="completed">AI Done</option>
-            <option value="failed">AI Failed</option>
+            <option value="none">Not Enriched Yet {filters.enrichment_status === 'none' ? `(${pagination.total})` : ''}</option>
+            <option value="in_progress">AI Enriching... {filters.enrichment_status === 'in_progress' ? `(${pagination.total})` : ''}</option>
+            <option value="completed">AI Done {filters.enrichment_status === 'completed' ? `(${pagination.total})` : ''}</option>
+            <option value="failed">AI Failed {filters.enrichment_status === 'failed' ? `(${pagination.total})` : ''}</option>
           </select>
 
           <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-300">
