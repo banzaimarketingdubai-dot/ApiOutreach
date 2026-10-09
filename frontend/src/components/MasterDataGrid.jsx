@@ -338,8 +338,23 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
       {/* Pagination Controls */}
       <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800 rounded-xl p-4 mt-4">
-        <div className="text-xs text-slate-400">
-          Showing {leads.length > 0 ? (pagination.page - 1) * filters.page_size + 1 : 0} to {Math.min(pagination.page * filters.page_size, pagination.total)} of {pagination.total} leads
+        <div className="flex items-center space-x-4">
+          <div className="text-xs text-slate-400">
+            Showing {leads.length > 0 ? (pagination.page - 1) * filters.page_size + 1 : 0} to {Math.min(pagination.page * filters.page_size, pagination.total)} of {pagination.total} leads
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={filters.page_size || 50}
+              onChange={(e) => setFilters({ ...filters, page_size: parseInt(e.target.value), page: 1 })}
+              className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 focus:outline-none"
+            >
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+              <option value={500}>500</option>
+            </select>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
           <button
