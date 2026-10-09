@@ -36,12 +36,27 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
     websites = await db.execute(select(func.count(Lead.id)).where(Lead.website != None))
     website_val = websites.scalar_one()
 
+    # Enrichment Stats
+    from sqlalchemy import cast, String
+    # Look into JSONB custom_data field
+    enrich_prog = await db.execute(select(func.count(Lead.id)).where(
+        Lead.custom_data['enrichment_status'].astext == 'in_progress'
+    ))
+    enrich_prog_val = enrich_prog.scalar_one()
+
+    enrich_comp = await db.execute(select(func.count(Lead.id)).where(
+        Lead.custom_data['enrichment_status'].astext == 'completed'
+    ))
+    enrich_comp_val = enrich_comp.scalar_one()
+
     return {
         "total": total_val,
         "whatsapp": wa_val,
         "email": email_val,
         "phone": phone_val,
-        "website": website_val
+        "website": website_val,
+        "enrichment_in_progress": enrich_prog_val,
+        "enrichment_completed": enrich_comp_val
     }
 
 @router.get("", response_model=dict)
@@ -56,6 +71,7 @@ async def list_leads(
     min_rating: Optional[float] = Query(None),
     max_rating: Optional[float] = Query(None),
     search: Optional[str] = Query(None),
+    enrichment_status: Optional[str] = Query(None),
     campaign_id: Optional[UUID] = Query(None),
     sort_by: Optional[str] = Query("created_at"),
     sort_order: Optional[str] = Query("desc"),
@@ -97,6 +113,10 @@ async def list_leads(
     if has_phone is True:
         filters.append(Lead.contacts.any(Contact.contact_type == "phone"))
 
+    if enrichment_status:
+        from sqlalchemy import cast, String
+        filters.append(Lead.custom_data['enrichment_status'].astext == enrichment_status)
+        
     if filters:
         stmt = stmt.where(and_(*filters))
 
@@ -252,12 +272,14 @@ async def trigger_targeted_enrichment(
         
     # Set status to in_progress immediately
     from sqlalchemy import cast, String
+    from sqlalchemy.orm.attributes import flag_modified
     leads_res = await db.execute(select(Lead).where(cast(Lead.id, String).in_(lead_ids)))
     leads = leads_res.scalars().all()
     for l in leads:
-        existing = l.custom_data or {}
+        existing = dict(l.custom_data) if l.custom_data else {}
         existing["enrichment_status"] = "in_progress"
         l.custom_data = existing
+        flag_modified(l, "custom_data")
     await db.commit()
         
     from app.workers.enrichment_tasks import run_targeted_enrichment
