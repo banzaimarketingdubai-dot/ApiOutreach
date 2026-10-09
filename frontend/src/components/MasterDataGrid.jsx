@@ -4,7 +4,7 @@ import { getExportCsvUrl } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
 
-export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh }) {
+export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh, pagination = { total: 0, total_pages: 1, page: 1 } }) {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
@@ -243,6 +243,32 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800 rounded-xl p-4 mt-4">
+        <div className="text-xs text-slate-400">
+          Showing {leads.length > 0 ? (pagination.page - 1) * filters.page_size + 1 : 0} to {Math.min(pagination.page * filters.page_size, pagination.total)} of {pagination.total} leads
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setFilters({ ...filters, page: Math.max(1, pagination.page - 1) })}
+            disabled={pagination.page <= 1}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-xs text-slate-300 font-medium px-2">
+            Page {pagination.page} of {pagination.total_pages}
+          </span>
+          <button
+            onClick={() => setFilters({ ...filters, page: Math.min(pagination.total_pages, pagination.page + 1) })}
+            disabled={pagination.page >= pagination.total_pages}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-colors"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {dryRunModalOpen && (
