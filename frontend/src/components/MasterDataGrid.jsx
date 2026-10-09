@@ -38,6 +38,23 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
     }
   };
 
+  const toggleSelectAll = (e) => {
+    if (e.target.checked) {
+      const newSelected = [...selectedLeads];
+      leads.forEach(lead => {
+        if (!newSelected.find(l => l.id === lead.id)) {
+          newSelected.push(lead);
+        }
+      });
+      setSelectedLeads(newSelected);
+    } else {
+      const visibleIds = new Set(leads.map(l => l.id));
+      setSelectedLeads(selectedLeads.filter(l => !visibleIds.has(l.id)));
+    }
+  };
+
+  const allVisibleSelected = leads.length > 0 && leads.every(lead => selectedLeads.find(l => l.id === lead.id));
+
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
       
@@ -168,7 +185,15 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-              <th className="py-3 px-4 w-10"></th>
+              <th className="py-3 px-4 w-10">
+                <input 
+                  type="checkbox" 
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAll}
+                  className="rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-950"
+                  title="Select/Deselect All Visible Leads"
+                />
+              </th>
               <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('company_name')}>
                 Company Name {getSortIcon('company_name')}
               </th>
