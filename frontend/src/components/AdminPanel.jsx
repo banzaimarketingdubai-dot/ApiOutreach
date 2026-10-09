@@ -132,7 +132,7 @@ export default function AdminPanel() {
                       <span className="text-slate-200 font-bold capitalize">{k.provider}</span>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider ${k.source === 'Vault' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-slate-700/50 text-slate-400 border border-slate-700'}`}>{k.source}</span>
                     </div>
-                    {k.masked && <span className="text-slate-500 font-mono text-[10px] pl-5">{k.masked}</span>}
+                    {k.masked && <span className="text-slate-400 font-mono text-sm pl-5">{k.masked}</span>}
                   </div>
                   <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-wider">Active</span>
                 </div>
