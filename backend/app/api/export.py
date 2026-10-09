@@ -126,3 +126,57 @@ async def export_leads_hubspot(
             raise HTTPException(status_code=500, detail=f"HubSpot API error: {resp.text}")
             
     return {"status": "success", "exported_count": len(leads)}
+
+from datetime import datetime
+
+class WebhookExportRequest(BaseModel):
+    lead_ids: List[str]
+    webhook_url: str
+
+@router.post("/webhook")
+async def export_leads_webhook(
+    body: WebhookExportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    import httpx, uuid
+    stmt = select(Lead).where(Lead.id.in_([uuid.UUID(i) for i in body.lead_ids]))
+    res = await db.execute(stmt)
+    leads = res.scalars().all()
+    
+    if not leads:
+        return {"status": "success", "exported_count": 0}
+
+    payload = {
+        "event": "leads.sync",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "leads": []
+    }
+    
+    for l in leads:
+        contacts_data = [{"type": c.contact_type, "value": c.contact_value} for c in l.contacts]
+        payload["leads"].append({
+            "lead_id": str(l.id),
+            "company_name": l.company_name,
+            "business_type": l.business_type,
+            "city": l.city,
+            "address": l.address,
+            "website": l.website,
+            "rating": l.rating,
+            "reviews_count": l.reviews_count,
+            "revo_score": l.revo_score,
+            "audit_notes": l.audit_notes,
+            "contacts": contacts_data
+        })
+        
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(body.webhook_url, json=payload)
+            if resp.status_code >= 400:
+                from fastapi import HTTPException
+                raise HTTPException(status_code=500, detail=f"Webhook failed with status {resp.status_code}: {resp.text}")
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to trigger webhook: {str(e)}")
+        
+    return {"status": "success", "exported_count": len(leads)}
