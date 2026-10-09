@@ -326,6 +326,30 @@ async def restore_leads(
     await db.commit()
     return {"status": "success", "restored": len(leads_data)}
 
+@router.post("/tools/reset_enrichment")
+async def reset_enrichment_status(payload: dict, db: AsyncSession = Depends(get_db)):
+    """Reset stuck in_progress status for selected leads."""
+    lead_ids = payload.get("lead_ids", [])
+    if not lead_ids:
+        return {"status": "ok", "reset_count": 0}
+
+    res = await db.execute(select(Lead).where(cast(Lead.id, String).in_(lead_ids)))
+    leads = res.scalars().all()
+    count = 0
+    for l in leads:
+        if l.custom_data and l.custom_data.get("enrichment_status") == "in_progress":
+            existing = dict(l.custom_data)
+            existing.pop("enrichment_status", None)
+            if "ai_logs" not in existing:
+                existing["ai_logs"] = []
+            existing["ai_logs"].append("[WARNING] Enrichment was manually cancelled or reset by user.")
+            l.custom_data = existing
+            flag_modified(l, "custom_data")
+            count += 1
+            
+    await db.commit()
+    return {"status": "ok", "reset_count": count}
+
 @router.post("/tools/enrich")
 async def trigger_targeted_enrichment(
     body: dict,

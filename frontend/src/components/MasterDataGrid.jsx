@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud, Send, MessageCircle } from 'lucide-react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon } from 'lucide-react';
 import { getExportCsvUrl, checkMessengers, exportLeadRadar } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
@@ -163,6 +163,36 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
               >
                 <Flame className="w-3.5 h-3.5" />
                 <span>Deep AI Enrich ({selectedCount})</span>
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Cancel enrichment for selected leads?')) return;
+                  try {
+                    const API_BASE = window.location.hostname.includes('vercel.app') 
+                      ? 'https://web-production-c4d98.up.railway.app/api/v1' 
+                      : '/api/v1';
+                      
+                    const payload = { lead_ids: selectedLeads.map(l => l.id) };
+                    const res = await fetch(`${API_BASE}/leads/tools/reset_enrichment`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                      setSelectedLeads([]);
+                      if (onRefresh) onRefresh();
+                    } else {
+                      alert('Failed to reset enrichment');
+                    }
+                  } catch (e) {
+                    alert('Error cancelling enrichment');
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 text-xs font-semibold border border-rose-500/30 transition-all mr-2"
+              >
+                <XOctagon className="w-3.5 h-3.5" />
+                <span>Cancel Enrich</span>
               </button>
             </>
           )}

@@ -134,6 +134,16 @@ export async function dryRunAI(prompt_template, lead_ids) {
   return res.json();
 }
 
+export async function resetEnrichment(lead_ids) {
+  const res = await fetch(`${API_BASE}/leads/tools/reset_enrichment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_ids })
+  });
+  if (!res.ok) throw new Error('Failed to reset enrichment');
+  return res.json();
+}
+
 export async function pauseCampaign(id) {
   const res = await fetch(`${API_BASE}/campaigns/${id}/suspend`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to pause campaign');
