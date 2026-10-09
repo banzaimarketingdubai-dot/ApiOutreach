@@ -187,6 +187,26 @@ async def clean_all_leads(
     await db.execute(text("TRUNCATE TABLE leads CASCADE"))
     await db.commit()
 
+@router.post("/tools/assign_all")
+async def assign_all_leads(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.email != "admin@revo.ai":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    campaign_id = body.get("campaign_id")
+    if not campaign_id:
+        raise HTTPException(status_code=400, detail="campaign_id is required")
+        
+    # Assign all leads that don't have a campaign (or all leads) to this campaign
+    from sqlalchemy import update
+    stmt = update(Lead).where(Lead.campaign_id == None).values(campaign_id=campaign_id)
+    result = await db.execute(stmt)
+    await db.commit()
+    return {"status": "success", "updated_count": result.rowcount}
+
 @router.post("/tools/restore")
 async def restore_leads(
     leads_data: List[dict],
