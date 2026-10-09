@@ -193,6 +193,29 @@ async def migrate_kyiv(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": f"Successfully moved {res.rowcount} leads to Beauty Kyiv", "campaign_id": kyiv_camp.id}
 
+@router.post("/tools/reset_stuck")
+async def reset_stuck_leads(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select
+    from app.models.lead import Lead
+    from sqlalchemy.orm.attributes import flag_modified
+    
+    # Assuming custom_data is a JSONB column
+    stmt = select(Lead)
+    res = await db.execute(stmt)
+    leads = res.scalars().all()
+    
+    count = 0
+    for lead in leads:
+        if lead.custom_data and lead.custom_data.get("enrichment_status") == "in_progress":
+            existing = dict(lead.custom_data)
+            existing["enrichment_status"] = "none"
+            lead.custom_data = existing
+            flag_modified(lead, "custom_data")
+            count += 1
+            
+    await db.commit()
+    return {"message": f"Reset {count} stuck leads back to none"}
+
 @router.post("/{campaign_id}/resume")
 async def resume_campaign(
     campaign_id: UUID,
