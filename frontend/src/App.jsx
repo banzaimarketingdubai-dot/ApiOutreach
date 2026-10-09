@@ -91,7 +91,7 @@ export default function App() {
             onSelectLead={(lead) => setSelectedLead(lead)}
             filters={filters}
             setFilters={setFilters}
-            onRefresh={loadLeads}
+            onRefresh={() => { loadLeads(); loadStats(); }}
             pagination={pagination}
           />
         )}

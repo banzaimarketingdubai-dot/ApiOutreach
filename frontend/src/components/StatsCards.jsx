@@ -1,7 +1,7 @@
 import React from 'react';
 import { Database, MessageSquare, Mail, Phone, Globe, Sparkles } from 'lucide-react';
 
-export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0 }, filters, setFilters }) {
+export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0, enrichment_failed: 0 }, filters, setFilters }) {
   
   const toggleFilter = (key) => {
     // If it's already true, clear it, otherwise set it to true (and clear the other contact filters to avoid conflicting empty sets, though they could be ANDed)
@@ -15,13 +15,14 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       has_email: key === 'has_email' ? !isActive : '',
       has_phone: key === 'has_phone' ? !isActive : '',
       has_website: key === 'has_website' ? !isActive : '',
-      enrichment_status: (key === 'in_progress' || key === 'completed') ? (isEnrich ? '' : key) : '',
+      enrichment_status: (key === 'in_progress' || key === 'completed' || key === 'failed') ? (isEnrich ? '' : key) : '',
       page: 1
     });
   };
 
   const inProg = stats.enrichment_in_progress || 0;
   const comp = stats.enrichment_completed || 0;
+  const fail = stats.enrichment_failed || 0;
 
   const cards = [
     {
@@ -38,7 +39,7 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
     {
       title: 'AI Enrichment Queue',
       value: `${inProg} / ${comp}`,
-      change: 'In Progress / Completed',
+      change: `${fail} failed`,
       icon: Sparkles,
       color: 'from-fuchsia-500/20 to-fuchsia-600/5 text-fuchsia-400 border-fuchsia-500/20',
       activeColor: 'border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.3)] bg-fuchsia-900/20',

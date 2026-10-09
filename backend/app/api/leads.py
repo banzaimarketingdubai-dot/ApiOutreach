@@ -49,6 +49,11 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
     ))
     enrich_comp_val = enrich_comp.scalar_one()
 
+    enrich_fail = await db.execute(select(func.count(Lead.id)).where(
+        Lead.custom_data['enrichment_status'].astext == 'failed'
+    ))
+    enrich_fail_val = enrich_fail.scalar_one()
+
     return {
         "total": total_val,
         "whatsapp": wa_val,
@@ -56,7 +61,8 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
         "phone": phone_val,
         "website": website_val,
         "enrichment_in_progress": enrich_prog_val,
-        "enrichment_completed": enrich_comp_val
+        "enrichment_completed": enrich_comp_val,
+        "enrichment_failed": enrich_fail_val
     }
 
 @router.get("", response_model=dict)
