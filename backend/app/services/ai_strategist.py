@@ -52,7 +52,7 @@ Design the optimal scraping campaign & custom variables to extract from company 
         
         errors = []
         if gemini_key:
-            for model in ["gemini-1.5-pro", "gemini-1.5-flash"]:
+            for model in ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.6-flash"]:
                 try:
                     result = await AIStrategistService._call_gemini_api(gemini_key, model, prompt)
                     if result:

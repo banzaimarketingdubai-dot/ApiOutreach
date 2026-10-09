@@ -79,7 +79,7 @@ Example Output:
         from app.services.vault_helper import get_api_key
         gemini_key = await get_api_key("gemini")
         if gemini_key:
-            for model in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+            for model in ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.8-pro"]:
                 try:
                     res = await AIEnrichmentService._call_gemini_batch(gemini_key, model, full_prompt)
                     if res:
