@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.api.dependencies import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.api.deps import get_db
 from app.models.lead import Lead
 from pydantic import BaseModel
 import os
@@ -26,8 +27,9 @@ class SendRequest(BaseModel):
     body: str
 
 @router.post("/draft", response_model=DraftResponse)
-def generate_email_draft(request: DraftRequest, db: Session = Depends(get_db)):
-    lead = db.query(Lead).filter(Lead.id == request.lead_id).first()
+async def generate_email_draft(request: DraftRequest, db: AsyncSession = Depends(get_db)):
+    lead_res = await db.execute(select(Lead).filter(Lead.id == request.lead_id))
+    lead = lead_res.scalar_one_or_none()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
         
