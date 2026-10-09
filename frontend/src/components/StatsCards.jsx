@@ -1,11 +1,12 @@
 import React from 'react';
-import { Database, MessageSquare, Mail, Phone, Globe } from 'lucide-react';
+import { Database, MessageSquare, Mail, Phone, Globe, Sparkles } from 'lucide-react';
 
-export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0 }, filters, setFilters }) {
+export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0 }, filters, setFilters }) {
   
   const toggleFilter = (key) => {
     // If it's already true, clear it, otherwise set it to true (and clear the other contact filters to avoid conflicting empty sets, though they could be ANDed)
     const isActive = filters[key] === true;
+    const isEnrich = filters.enrichment_status === key;
     
     // We clear page to 1 when changing filters
     setFilters({
@@ -14,9 +15,13 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       has_email: key === 'has_email' ? !isActive : '',
       has_phone: key === 'has_phone' ? !isActive : '',
       has_website: key === 'has_website' ? !isActive : '',
+      enrichment_status: (key === 'in_progress' || key === 'completed') ? (isEnrich ? '' : key) : '',
       page: 1
     });
   };
+
+  const inProg = stats.enrichment_in_progress || 0;
+  const comp = stats.enrichment_completed || 0;
 
   const cards = [
     {
@@ -27,8 +32,19 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, email: 0, 
       color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20',
       activeColor: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-900/20',
       filterKey: 'all',
-      onClick: () => setFilters({...filters, has_whatsapp: '', has_email: '', has_phone: '', has_website: '', page: 1}),
-      isActive: !filters.has_whatsapp && !filters.has_email && !filters.has_phone && !filters.has_website
+      onClick: () => setFilters({...filters, has_whatsapp: '', has_email: '', has_phone: '', has_website: '', enrichment_status: '', page: 1}),
+      isActive: !filters.has_whatsapp && !filters.has_email && !filters.has_phone && !filters.has_website && !filters.enrichment_status
+    },
+    {
+      title: 'AI Enrichment Queue',
+      value: `${inProg} / ${comp}`,
+      change: 'In Progress / Completed',
+      icon: Sparkles,
+      color: 'from-fuchsia-500/20 to-fuchsia-600/5 text-fuchsia-400 border-fuchsia-500/20',
+      activeColor: 'border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.3)] bg-fuchsia-900/20',
+      filterKey: 'in_progress',
+      onClick: () => toggleFilter('in_progress'),
+      isActive: filters.enrichment_status === 'in_progress' || filters.enrichment_status === 'completed'
     },
     {
       title: 'Websites Collected',
