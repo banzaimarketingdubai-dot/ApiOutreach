@@ -74,28 +74,34 @@ async def login_google(body: GoogleAuthRequest, db: AsyncSession = Depends(get_d
             detail=f"Access denied: {email_clean} is not in authorized admin whitelist."
         )
 
-    # Find or create user
-    stmt = select(User).where(User.email == email_clean)
-    res = await db.execute(stmt)
-    user = res.scalars().first()
+    try:
+        # Find or create user
+        stmt = select(User).where(User.email == email_clean)
+        res = await db.execute(stmt)
+        user = res.scalars().first()
 
-    if not user:
-        user = User(
-            email=email_clean,
-            hashed_password=get_password_hash("google_oauth_auth"),
-            full_name=full_name,
-            role=UserRole.ADMIN
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    elif user.full_name != full_name and full_name:
-        user.full_name = full_name
-        await db.commit()
-        await db.refresh(user)
+        if not user:
+            user = User(
+                email=email_clean,
+                hashed_password=get_password_hash("google_oauth_auth"),
+                full_name=full_name,
+                role=UserRole.ADMIN
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        elif user.full_name != full_name and full_name:
+            user.full_name = full_name
+            await db.commit()
+            await db.refresh(user)
 
-    access_token = create_access_token(subject=str(user.id))
-    return Token(access_token=access_token, user=UserResponse.model_validate(user))
+        access_token = create_access_token(subject=str(user.id))
+        return Token(access_token=access_token, user=UserResponse.model_validate(user))
+    except Exception as err:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"OAuth login failed: {str(err)}")
+
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):

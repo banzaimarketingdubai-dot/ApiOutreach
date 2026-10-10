@@ -16,6 +16,14 @@ from app.api.settings import router as settings_router
 from app.api.templates import router as templates_router
 from app.api.outreach import router as outreach_router
 
+# Import models so Base.metadata is fully populated for create_all
+import app.models.user
+import app.models.lead
+import app.models.contact
+import app.models.outreach_campaign
+import app.models.email_sequence
+
+
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
