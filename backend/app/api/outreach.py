@@ -143,6 +143,16 @@ class OmniDraftRequest(BaseModel):
     lead_id: str
     prompt: Optional[str] = None
 
+@router.get("/debug_models")
+async def list_available_models():
+    from app.services.vault_helper import get_api_key
+    gemini_key = await get_api_key("gemini")
+    import httpx
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={gemini_key}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        return resp.json()
+
 @router.post("/draft")
 async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depends(get_db)):
     """Generates AI drafts for a single lead based on the provided prompt."""
