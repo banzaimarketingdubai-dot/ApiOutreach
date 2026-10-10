@@ -178,12 +178,11 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         await db.commit() # Save intermediate success
                         
                         # Auto-Check Messengers during enrichment
-                        phone_to_check = target_lead.phone
-                        if not phone_to_check:
-                            c_res = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_type == "phone"))
-                            first_phone = c_res.scalars().first()
-                            if first_phone:
-                                phone_to_check = first_phone.contact_value
+                        phone_to_check = None
+                        c_res = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_type == "phone"))
+                        first_phone = c_res.scalars().first()
+                        if first_phone:
+                            phone_to_check = first_phone.contact_value
 
                         async def _check_msg(phone, custom_data_dict, lead_id):
                             try:
