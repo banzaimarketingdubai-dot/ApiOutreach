@@ -10,7 +10,9 @@ class FunnelType(str, enum.Enum):
     HIDDEN_GEMS = "HIDDEN_GEMS"
     SINKING_GIANTS = "SINKING_GIANTS"
     GHOSTS = "GHOSTS"
+    EMPATHY_AUDIT = "EMPATHY_AUDIT"
     CUSTOM = "CUSTOM"
+
 
 class EmailSequenceStatus(str, enum.Enum):
     DRAFT = "DRAFT"         # Awaiting user approval
