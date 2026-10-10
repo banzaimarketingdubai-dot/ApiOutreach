@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon, MoreVertical } from 'lucide-react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon, MoreVertical, Beaker } from 'lucide-react';
+
 import { getExportCsvUrl, checkMessengers, exportLeadRadar, startFunnel, pauseFunnel, resumeFunnel } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
