@@ -1,13 +1,17 @@
+import sys
 import httpx
 import time
 import json
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 BASE_URL = "https://web-production-c4d98.up.railway.app/api/v1"
 
 def run_e2e_test():
     print("=== STARTING END-TO-END LIVE OUTREACH & ANALYTICS TEST ===")
     
-    # 0. Authenticate via Admin OAuth
+    # 0. Authenticate Admin user (Google OAuth / JWT)
     print("\n[Step 0] Authenticating Admin user (Google OAuth / JWT)...")
     auth_resp = httpx.post(
         f"{BASE_URL}/auth/google",
@@ -24,7 +28,7 @@ def run_e2e_test():
     headers = {"Authorization": f"Bearer {token}"}
     print(f"-> Logged in as: {auth_data['user']['email']} (Role: {auth_data['user']['role']})")
 
-    # 1. Fetch Existing Lead or Create One
+    # 1. Fetch Active Leads
     print("\n[Step 1] Fetching active leads from database...")
     try:
         resp = httpx.get(f"{BASE_URL}/leads?page_size=5", headers=headers, timeout=15.0)
@@ -70,7 +74,7 @@ def run_e2e_test():
     open_payload = {
         "type": "email.opened",
         "data": {
-            "created_at": "2026-10-10T14:11:00.000Z",
+            "created_at": "2026-10-10T14:15:00.000Z",
             "email_id": f"resend_test_{lead_id}",
             "tags": [{"name": "lead_id", "value": lead_id}]
         }
@@ -82,7 +86,7 @@ def run_e2e_test():
     click_payload = {
         "type": "email.clicked",
         "data": {
-            "created_at": "2026-10-10T14:11:15.000Z",
+            "created_at": "2026-10-10T14:15:15.000Z",
             "email_id": f"resend_test_{lead_id}",
             "tags": [{"name": "lead_id", "value": lead_id}],
             "click": {"link": "https://gbpilot-saas.vercel.app/audit/test"}

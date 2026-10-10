@@ -245,30 +245,38 @@ class FunnelActionRequest(BaseModel):
 async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_db)):
     """Starts a drip funnel for the selected leads."""
     from app.models.email_sequence import FunnelType
+    from uuid import UUID
     if not req.funnel_type:
         raise HTTPException(status_code=400, detail="funnel_type is required")
         
-    leads_res = await db.execute(select(Lead).filter(Lead.id.in_(req.lead_ids), Lead.is_unsubscribed == False))
-    leads = leads_res.scalars().all()
-    
-    count = 0
-    for lead in leads:
-        # Stop existing sequence
-        await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead.id).values(status=EmailSequenceStatus.PAUSED))
+    try:
+        uuid_ids = [UUID(str(i)) for i in req.lead_ids if i]
+        leads_res = await db.execute(select(Lead).filter(Lead.id.in_(uuid_ids), Lead.is_unsubscribed == False))
+        leads = leads_res.scalars().all()
         
-        # Create new active sequence
-        new_seq = EmailSequence(
-            lead_id=lead.id,
-            funnel_type=req.funnel_type,
-            status=EmailSequenceStatus.ACTIVE,
-            current_touch=1,
-            next_send_date=func.now()
-        )
-        db.add(new_seq)
-        count += 1
-        
-    await db.commit()
-    return {"status": "success", "started": count}
+        count = 0
+        for lead in leads:
+            # Stop existing sequence
+            await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead.id).values(status=EmailSequenceStatus.PAUSED))
+            
+            # Create new active sequence
+            new_seq = EmailSequence(
+                lead_id=lead.id,
+                funnel_type=req.funnel_type,
+                status=EmailSequenceStatus.ACTIVE,
+                current_touch=1,
+                next_send_date=func.now()
+            )
+            db.add(new_seq)
+            count += 1
+            
+        await db.commit()
+        return {"status": "success", "started": count}
+    except Exception as err:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to start funnel: {str(err)}")
+
 
 @router.post("/funnels/pause")
 async def pause_funnels(req: FunnelActionRequest, db: AsyncSession = Depends(get_db)):
