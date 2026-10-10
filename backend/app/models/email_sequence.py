@@ -48,6 +48,10 @@ class EmailSequence(Base):
     email_subject = Column(String, nullable=True)
     email_content = Column(Text, nullable=True) # The generated email body
     
+    # Analytics tracking
+    opened_at = Column(DateTime(timezone=True), nullable=True)
+    clicked_at = Column(DateTime(timezone=True), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

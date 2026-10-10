@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from typing import List, Optional
 from pydantic import BaseModel
 import os
@@ -365,7 +365,16 @@ async def resend_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         await db.execute(
             update(EmailSequence)
             .where(EmailSequence.lead_id == lead_id, EmailSequence.status != EmailSequenceStatus.REPLIED)
-            .values(status=EmailSequenceStatus.OPENED)
+            .values(status=EmailSequenceStatus.OPENED, opened_at=func.now())
+        )
+        
+    elif event_type == "email.clicked":
+        click_url = data.get("click", {}).get("url", "")
+        print(f"[CLICK] Lead {lead_id} clicked URL: {click_url}")
+        await db.execute(
+            update(EmailSequence)
+            .where(EmailSequence.lead_id == lead_id)
+            .values(clicked_at=func.now())
         )
         
     elif event_type == "email.replied": # Hot Lead!
