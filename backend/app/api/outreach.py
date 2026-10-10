@@ -11,7 +11,7 @@ from app.models.lead import Lead
 from app.models.outreach_campaign import OutreachCampaign, OutreachStatus
 from app.models.email_sequence import EmailSequence, EmailSequenceStatus, PromoTrackStatus
 
-router = APIRouter(prefix="/api/v1/outreach", tags=["Outreach Campaigns"])
+router = APIRouter()
 
 # =======================
 # Pydantic Schemas
