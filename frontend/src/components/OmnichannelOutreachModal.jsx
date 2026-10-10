@@ -8,9 +8,14 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState('email');
-  const [promptContext, setPromptContext] = useState(`Напиши персонализированное холодное письмо для ${lead?.company_name || 'клиента'}.
-В первой части дай максимум полезной образовательной информации и ценных советов по ведению Google профиля (используй их рейтинг ${lead?.rating || 4.0} и факт наличия неотвеченных отзывов).
-В конце сделай четкий CTA в стиле: "Наше ИИ-приложение уже делает всё это за вас — без ошибок, пропусков и траты вашего времени. Подключитесь и пользуйтесь". Предложи бесплатный триал на 14 дней.`);
+  const unanswered = lead?.custom_data?.unanswered_reviews || Math.floor((lead?.reviews_count || 20) * 0.3);
+  const lastPost = lead?.custom_data?.last_post_days_ago || 45;
+
+  const [promptContext, setPromptContext] = useState(`Напиши персонализированное холодное сообщение для ${lead?.company_name || 'компании'}.
+У них рейтинг ${lead?.rating || 4.0} на основе ${lead?.reviews_count || 0} отзывов.
+В тексте сделай акцент на том, что мы заметили у них около ${unanswered} неотвеченных отзывов, а последний SEO-пост выходил более ${lastPost} дней назад.
+Объясни, как эта нехватка активности отдает их клиентов конкурентам в Google Карты.
+В конце сделай призыв к действию: "Наше ИИ-приложение GBPilot автоматически отвечает на все отзывы и постит новости 24/7. Попробуйте бесплатно на 14 дней".`);
   const [drafts, setDrafts] = useState({
     email: { subject: '', body: '', audit_link: '' },
     whatsapp: { body: '' },
