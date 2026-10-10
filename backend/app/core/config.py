@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     GROK_API_KEYS: List[str] = []
     
     # LLM Settings
-    PRIMARY_GEMINI_MODEL: str = "gemini-3.8-pro"
-    FALLBACK_GEMINI_MODELS: List[str] = ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.6-flash"]
+    PRIMARY_GEMINI_MODEL: str = "gemini-3.1-pro"
+    FALLBACK_GEMINI_MODELS: List[str] = ["gemini-3.1-pro", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
     
     @property
     def ASYNC_DATABASE_URL(self) -> str:

@@ -7,6 +7,8 @@ import AIStrategistModal from './components/AIStrategistModal';
 import LeadDrawer from './components/LeadDrawer';
 import MergeCenter from './components/MergeCenter';
 import AdminPanel from './components/AdminPanel';
+import OutreachBuilder from './components/OutreachBuilder';
+import PromoTrack from './components/PromoTrack';
 import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {
@@ -115,6 +117,16 @@ export default function App() {
         )}
         {activeTab === 'admin' && (
           <AdminPanel />
+        )}
+        {activeTab === 'outreach' && (
+          <OutreachBuilder 
+            globalCampaignId={globalCampaignId} 
+          />
+        )}
+        {activeTab === 'promotrack' && (
+          <PromoTrack 
+            onSelectLead={(lead) => setSelectedLead(lead)} 
+          />
         )}
 
       </main>

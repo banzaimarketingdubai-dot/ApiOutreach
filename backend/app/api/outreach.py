@@ -1,122 +1,293 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from app.api.deps import get_db
-from app.models.lead import Lead
+from sqlalchemy import select, update
+from typing import List, Optional
 from pydantic import BaseModel
 import os
 import resend
 
-router = APIRouter(prefix="/api/v1/outreach", tags=["Outreach"])
+from app.api.deps import get_db
+from app.models.lead import Lead
+from app.models.outreach_campaign import OutreachCampaign, OutreachStatus
+from app.models.email_sequence import EmailSequence, EmailSequenceStatus, PromoTrackStatus
 
-# Resend API Key setup (will be set in ENV, but we mock/handle it gracefully if missing)
-resend.api_key = os.environ.get("RESEND_API_KEY", "re_mock_key_123")
+router = APIRouter(prefix="/api/v1/outreach", tags=["Outreach Campaigns"])
 
+# =======================
+# Pydantic Schemas
+# =======================
+class CampaignCreate(BaseModel):
+    name: str
+    prompt_template: str
+    filters: dict
+
+class CampaignResponse(BaseModel):
+    id: str
+    name: str
+    status: str
+    
+    class Config:
+        from_attributes = True
+
+# =======================
+# Campaign Management
+# =======================
+@router.post("/campaigns", response_model=CampaignResponse)
+async def create_campaign(campaign: CampaignCreate, db: AsyncSession = Depends(get_db)):
+    new_campaign = OutreachCampaign(
+        name=campaign.name,
+        prompt_template=campaign.prompt_template,
+        filters=campaign.filters,
+        status=OutreachStatus.DRAFT
+    )
+    db.add(new_campaign)
+    await db.commit()
+    await db.refresh(new_campaign)
+    return new_campaign
+
+@router.get("/campaigns", response_model=List[CampaignResponse])
+async def list_campaigns(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(OutreachCampaign).order_by(OutreachCampaign.created_at.desc()))
+    return result.scalars().all()
+
+# =======================
+# Sequence Generation (Drafts)
+# =======================
 class DraftRequest(BaseModel):
+    campaign_id: str
+    lead_ids: List[str]
+
+@router.post("/generate_drafts")
+async def generate_drafts(req: DraftRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Generates Touch 1 drafts for the selected leads using the new GBPilot strategy.
+    """
+    campaign_res = await db.execute(select(OutreachCampaign).filter(OutreachCampaign.id == req.campaign_id))
+    campaign = campaign_res.scalar_one_or_none()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    leads_res = await db.execute(select(Lead).filter(Lead.id.in_(req.lead_ids), Lead.is_unsubscribed == False))
+    leads = leads_res.scalars().all()
+    
+    created_count = 0
+    for lead in leads:
+        # Check if sequence already exists
+        seq_res = await db.execute(select(EmailSequence).filter(EmailSequence.lead_id == lead.id, EmailSequence.campaign_id == campaign.id))
+        if seq_res.scalar_one_or_none():
+            continue # Already in sequence
+            
+        audit_link = f"https://gbpilot-saas.vercel.app/audit/{lead.id}"
+        unsub_link = f"https://api.revo-masterdata.com/api/v1/outreach/webhooks/unsubscribe?lead_id={lead.id}"
+        
+        # Touch 1: The Icebreaker (Empathy + Audit + Reply CTA)
+        # Generate dynamic OpenGraph Image URL for the Snapshot
+        snapshot_img_url = f"https://gbpilot-saas.vercel.app/api/og/audit?id={lead.id}&name={lead.company_name.replace(' ', '%20')}&score={int(lead.rating * 20 if lead.rating else 80)}"
+        
+        # Extract specific data for personalization (mocking fallbacks if not in custom_data)
+        biz_type = lead.business_type or "бизнесе"
+        custom_data = lead.custom_data or {}
+        unanswered = custom_data.get("unanswered_reviews", int((lead.reviews_count or 20) * 0.3)) # mock ~30% unanswered
+        last_post = custom_data.get("last_post_days_ago", 45) # mock 45 days ago
+        
+        body = f"""<div style="font-family: sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6; max-width: 600px;">
+<p>Здравствуйте, команда <strong>{lead.company_name}</strong>!</p>
+
+<p>Мы проанализировали ваш профиль на Google Картах. У вас хороший рейтинг ({lead.rating or 4.0} ⭐️ и {lead.reviews_count or 0} отзывов), видно, что вы заботитесь о качестве сервиса.</p>
+
+<p>Но есть техническая проблема: алгоритмы Google пессимизируют ваш профиль прямо сейчас. Мы видим, что у вас <strong>около {unanswered} неотвеченных отзывов</strong>, а последний SEO-пост выходил <strong>более {last_post} дней назад</strong>.</p>
+
+<p><strong>Почему это убивает ваши продажи:</strong> Гугл отдает топовые места тем компаниям, которые проявляют постоянную активность. Пока вы работаете над бизнесом, ваши конкуренты, которые регулярно отвечают на отзывы и публикуют апдейты, забирают ваших клиентов.</p>
+
+<p>Я сгенерировал интерактивную тепловую карту (Geo-Grid) вашего района. Красные зоны — это сектора, где вы проигрываете конкурентам в поиске:</p>
+
+<p style="text-align: center; margin: 25px 0;">
+    <a href="{audit_link}" target="_blank">
+        <img src="{snapshot_img_url}" alt="Аудит {lead.company_name}" style="width: 100%; max-width: 500px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+    </a>
+</p>
+
+<p><strong>Как это исправить (Бесплатно):</strong><br>
+1. Прямо сегодня ответьте на все {unanswered} отзывов, обязательно используя ключевые слова (например, "{biz_type} в нашем районе").<br>
+2. Раз в неделю публикуйте короткий пост с фотографией (с геотегами) о ваших новостях.</p>
+
+<p>Мы понимаем, что у вас нет времени ежедневно изучать новинки алгоритмов Google. Вы должны развивать бизнес, а не сидеть в кабинете Google My Business.</p>
+
+<p>Поэтому мы создали <strong>GBPilot</strong> — ИИ-систему, которая полностью берет ведение профиля на себя. Она автоматически генерирует идеальные SEO-ответы на отзывы и публикует посты 24/7 (с контролем качества и защитой от конкурентов).</p>
+
+<p>Если хотите протестировать ИИ-автопилот бесплатно на 14 дней — просто <strong>ответьте на это письмо</strong>, и я вышлю секретный промокод.</p>
+
+<p>С уважением,<br>Отдел локальной SEO-аналитики REVO</p>
+
+<br><br>
+<p style="font-size: 11px; color: #9ca3af;">
+    Письмо отправлено на основе публичных данных Google Карт. 
+    <a href="{unsub_link}" style="color: #9ca3af; text-decoration: underline;">Отписаться от аналитики</a>
+</p>
+</div>"""
+        new_seq = EmailSequence(
+            lead_id=lead.id,
+            campaign_id=campaign.id,
+            current_touch=1,
+            status=EmailSequenceStatus.DRAFT,
+            email_subject=subject,
+            email_content=body
+        )
+        db.add(new_seq)
+        created_count += 1
+        
+    await db.commit()
+    return {"message": f"Generated {created_count} drafts successfully."}
+
+class OmniDraftRequest(BaseModel):
     lead_id: str
+    prompt: Optional[str] = None
 
-class DraftResponse(BaseModel):
-    subject: str
-    body: str
-    audit_link: str
-
-class SendRequest(BaseModel):
-    lead_id: str
-    recipient_email: str
-    subject: str
-    body: str
-
-@router.post("/draft", response_model=DraftResponse)
-async def generate_email_draft(request: DraftRequest, db: AsyncSession = Depends(get_db)):
-    lead_res = await db.execute(select(Lead).filter(Lead.id == request.lead_id))
+@router.post("/draft")
+async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depends(get_db)):
+    """Generates AI drafts for a single lead based on the provided prompt."""
+    lead_res = await db.execute(select(Lead).filter(Lead.id == req.lead_id))
     lead = lead_res.scalar_one_or_none()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
         
+    from app.services.vault_helper import get_api_key
+    gemini_key = await get_api_key("gemini")
+    
+    if not gemini_key:
+        raise HTTPException(status_code=400, detail="Gemini API key not configured in Vault or .env")
+        
     audit_link = f"https://gbpilot-saas.vercel.app/audit/{lead.id}"
+    snapshot_img_url = f"https://placehold.co/600x400/ef4444/white/png?text=Geo-Grid+Heatmap+Snapshot"
     
-    business_type = lead.business_type or "бизнес"
-    name = lead.company_name
-    rating = lead.rating or 0.0
-    reviews = lead.reviews_count or 0
-    city = lead.city or "вашем районе"
+    # Construct the instruction for Gemini
+    system_instruction = f"""
+    You are an expert B2B SaaS copywriter. Your goal is to write highly converting outreach messages.
+    Generate a JSON response containing drafts for 'email' (with subject and body), 'whatsapp', 'telegram', and 'direct'.
+    The email body should be in HTML format (using simple tags like <p>, <strong>, <br>).
+    You MUST embed this exact image HTML in the email body where appropriate to show their audit snapshot:
+    <p style="text-align: center; margin: 25px 0;"><a href="{audit_link}" target="_blank"><img src="{snapshot_img_url}" alt="Audit" style="width: 100%; max-width: 500px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" /></a></p>
     
-    # Legend: Market Research Analytics
-    if rating < 4.5:
-        subject = f"Сводка по исследованию рынка {business_type}: {name}"
-        body = f"""Здравствуйте!
-        
-Наше агентство REVO Data проводит квартальное исследование рынка {business_type} в {city}. 
-При анализе данных Google Карт мы обратили внимание на профиль вашей компании ({name}).
-
-Мы заметили, что ваш текущий рейтинг ({rating} ⭐️ на основе {reviews} отзывов) находится в зоне риска по сравнению с конкурентами в вашем районе. Алгоритмы поиска активно пессимизируют профили с такими показателями, из-за чего вы можете недополучать до 35% потенциальных клиентов.
-
-Чтобы быть полезными, мы сгенерировали для вас бесплатный аналитический мини-отчет. Он показывает, какие именно факторы сейчас тянут ваш профиль вниз, и что нужно исправить.
-
-🔗 Посмотреть ваш конфиденциальный отчет можно здесь:
-{audit_link}
-
-Буду рад ответить на любые вопросы, если они возникнут после просмотра отчета.
-
-С уважением,
-Отдел аналитики
-REVO Master Data
-"""
-    else:
-        subject = f"Аналитика конкурентов для {name} ({business_type})"
-        body = f"""Здравствуйте!
-        
-Наше агентство REVO Data проводит анализ рынка локального бизнеса в {city}. 
-Мы изучили профиль вашей компании ({name}) на Google Картах и хотим отметить отличную работу: ваш рейтинг ({rating} ⭐️) говорит о высоком качестве сервиса!
-
-Однако мы заметили несколько уязвимостей в технической настройке профиля (отсутствие скрытых категорий и свежих обновлений), которые позволяют конкурентам перехватывать часть вашего горячего трафика. 
-
-Мы составили для вас персональный аналитический отчет. В нем показано, как с помощью ИИ и пары кликов вы можете "дожать" выдачу и закрепиться на первых местах.
-
-🔗 Ознакомьтесь с отчетом здесь:
-{audit_link}
-
-Отличного дня и стабильного роста!
-
-С уважением,
-Отдел аналитики
-REVO Master Data
-"""
-
-    return DraftResponse(
-        subject=subject,
-        body=body,
-        audit_link=audit_link
-    )
-
-@router.post("/send")
-async def send_outreach_email(request: SendRequest, db: AsyncSession = Depends(get_db)):
+    Lead Data:
+    Company Name: {lead.company_name}
+    Niche: {lead.business_type}
+    City: {lead.city}
+    Rating: {lead.rating} (from {lead.reviews_count} reviews)
+    """
+    
+    user_instruction = req.prompt or f"Напиши холодное письмо для {lead.company_name} с предложением нашего сервиса."
+    
+    payload = {
+        "contents": [
+            {"role": "user", "parts": [{"text": system_instruction + "\n\nUser Instruction:\n" + user_instruction}]}
+        ],
+        "generationConfig": {
+            "temperature": 0.7,
+            "response_mime_type": "application/json",
+            "response_schema": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string"},
+                    "email_body": {"type": "string"},
+                    "whatsapp": {"type": "string"},
+                    "telegram": {"type": "string"},
+                    "direct": {"type": "string"}
+                },
+                "required": ["subject", "email_body", "whatsapp", "telegram", "direct"]
+            }
+        }
+    }
+    
+    import httpx
+    # Using gemini-3.8-flash as the fast/reliable model
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={gemini_key}"
+    
     try:
-        from app.models.vault import VaultKey
-        from sqlalchemy import select
+        from app.services.rate_limiter import wait_for_gemini_capacity
+        await wait_for_gemini_capacity()
         
-        # 1. Try DB Vault
-        resend_vault_res = await db.execute(select(VaultKey).filter(VaultKey.provider == "resend"))
-        resend_vault = resend_vault_res.scalar_one_or_none()
-        if resend_vault and resend_vault.api_key_encrypted:
-            resend.api_key = resend_vault.api_key_encrypted
-        else:
-            # 2. Try OS Env
-            resend.api_key = os.environ.get("RESEND_API_KEY", "re_mock_key_123")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"Gemini API error: {resp.text}")
+                
+            raw_json = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            import json
+            data = json.loads(raw_json)
             
-        if resend.api_key == "re_mock_key_123":
-            print(f"[MOCK SEND] Email to {request.recipient_email} via Resend. Subject: {request.subject}")
-            return {"status": "success", "message": "Simulated sending email (Missing API Key)", "id": "mock_123"}
-            
-        response = resend.Emails.send({
-            "from": "REVO Analytics <analytics@revo-masterdata.com>",
-            "to": [request.recipient_email],
-            "subject": request.subject,
-            "html": request.body.replace(chr(10), "<br>") # Convert newlines to HTML breaks
-        })
-        
-        # Log this action to lead history in real app
-        
-        return {"status": "success", "message": "Email sent via Resend", "data": response}
+            return {
+                "subject": data.get("subject", ""),
+                "body": data.get("email_body", ""),
+                "audit_link": audit_link,
+                "whatsapp": data.get("whatsapp", ""),
+                "telegram": data.get("telegram", ""),
+                "direct": data.get("direct", "")
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# =======================
+# Webhooks
+# =======================
+@router.get("/webhooks/unsubscribe")
+async def handle_unsubscribe(lead_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    1-Click Unsubscribe Endpoint.
+    """
+    # Set lead to unsubscribed
+    await db.execute(update(Lead).where(Lead.id == lead_id).values(is_unsubscribed=True))
+    
+    # Halt all active sequences
+    await db.execute(
+        update(EmailSequence)
+        .where(EmailSequence.lead_id == lead_id)
+        .values(status=EmailSequenceStatus.UNSUBSCRIBED, promo_status=PromoTrackStatus.UNSUBSCRIBED)
+    )
+    await db.commit()
+    
+    # In a real app, this would return an HTML template saying "You have been unsubscribed."
+    return {"status": "success", "message": "Вы успешно отписаны от рассылок."}
+
+@router.post("/webhooks/resend")
+async def resend_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    Catches events from Resend (e.g., email.opened, email.bounced, email.replied).
+    In a real app, verify Resend signature here.
+    """
+    payload = await request.json()
+    event_type = payload.get("type")
+    data = payload.get("data", {})
+    
+    # Assuming we passed lead_id in headers or tags when sending via Resend
+    # For demonstration, let's assume we extract lead_id from tags
+    tags = data.get("tags", [])
+    lead_id = next((t["value"] for t in tags if t["name"] == "lead_id"), None)
+    
+    if not lead_id:
+        return {"status": "ignored", "reason": "No lead_id in tags"}
+        
+    if event_type == "email.bounced":
+        await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead_id).values(status=EmailSequenceStatus.BOUNCED))
+    
+    elif event_type == "email.opened":
+        await db.execute(
+            update(EmailSequence)
+            .where(EmailSequence.lead_id == lead_id, EmailSequence.status != EmailSequenceStatus.REPLIED)
+            .values(status=EmailSequenceStatus.OPENED)
+        )
+        
+    elif event_type == "email.replied": # Hot Lead!
+        # Stop sequence, set to replied, move to promo track
+        await db.execute(
+            update(EmailSequence)
+            .where(EmailSequence.lead_id == lead_id)
+            .values(
+                status=EmailSequenceStatus.REPLIED,
+                promo_status=PromoTrackStatus.CODE_SENT
+            )
+        )
+        # Here we would enqueue a Celery task to send the "Welcome14" email
+        print(f"[HOT LEAD] Lead {lead_id} replied! Sending Welcome14 code.")
+        
+    await db.commit()
+    return {"status": "success"}

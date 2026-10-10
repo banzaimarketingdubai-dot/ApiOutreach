@@ -101,7 +101,7 @@ Example Output:
         from app.services.vault_helper import get_api_key
         gemini_key = await get_api_key("gemini")
         if gemini_key:
-            for model in ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.8-pro"]:
+            for model in ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro"]:
                 try:
                     res = await AIEnrichmentService._call_gemini_batch(gemini_key, model, full_prompt)
                     if res:
@@ -128,6 +128,9 @@ Example Output:
 
     @staticmethod
     async def _call_gemini_batch(api_key: str, model: str, prompt: str) -> Dict[str, Dict[str, Any]]:
+        from app.services.rate_limiter import wait_for_gemini_capacity
+        await wait_for_gemini_capacity()
+        
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -156,11 +159,14 @@ Example Output:
             return [f"[Mock generated email based on '{prompt_template}']\nHello {l.get('company_name')}, we see you are in {l.get('city')}..." for l in leads_data]
 
         results = []
-        model = "gemini-1.5-flash"
+        model = "gemini-3.8-flash"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             for lead in leads_data:
+                from app.services.rate_limiter import wait_for_gemini_capacity
+                await wait_for_gemini_capacity()
+                
                 # Substitute variables in prompt
                 prompt = prompt_template
                 for k, v in lead.items():

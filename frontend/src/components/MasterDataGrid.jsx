@@ -438,12 +438,32 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <div className="flex items-center space-x-1.5">
-                          {phones.length > 0 && <Phone className="w-3.5 h-3.5 text-emerald-400" title="Phone available" />}
-                          {emails.length > 0 && <Mail className="w-3.5 h-3.5 text-blue-400" title="Email available" />}
-                          {lead.custom_data?.whatsapp_available && <MessageCircle className="w-3.5 h-3.5 text-green-500" title="WhatsApp available" />}
-                          {lead.custom_data?.telegram_available && <Send className="w-3.5 h-3.5 text-blue-400" title="Telegram available" />}
-                          {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
+                        <div className="flex items-center space-x-2">
+                          {phones.length > 0 && (
+                            <a href={`tel:${phones[0].contact_value}`} onClick={(e) => e.stopPropagation()} className="hover:scale-110 transition-transform">
+                              <Phone className="w-4 h-4 text-emerald-400 hover:text-emerald-300" title={`Phone: ${phones[0].contact_value}`} />
+                            </a>
+                          )}
+                          {emails.length > 0 && (
+                            <a href={`mailto:${emails[0].contact_value}`} onClick={(e) => e.stopPropagation()} className="hover:scale-110 transition-transform">
+                              <Mail className="w-4 h-4 text-blue-400 hover:text-blue-300" title={`Email: ${emails[0].contact_value}`} />
+                            </a>
+                          )}
+                          {lead.custom_data?.whatsapp_available && phones.length > 0 && (
+                            <a href={`https://wa.me/${phones[0].contact_value.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="hover:scale-110 transition-transform">
+                              <MessageCircle className="w-4 h-4 text-green-500 hover:text-green-400" title="Open in WhatsApp" />
+                            </a>
+                          )}
+                          {lead.custom_data?.telegram_available && (
+                            <button onClick={(e) => { e.stopPropagation(); alert('Telegram link stored in custom_data'); }} className="hover:scale-110 transition-transform">
+                              <Send className="w-4 h-4 text-sky-400 hover:text-sky-300" title="Telegram available" />
+                            </button>
+                          )}
+                          {hasWeb && (
+                            <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="hover:scale-110 transition-transform">
+                              <Globe className="w-4 h-4 text-purple-400 hover:text-purple-300" title="Visit Website" />
+                            </a>
+                          )}
                         </div>
                         
                         {lead.custom_data?.enrichment_status === 'in_progress' && (() => {

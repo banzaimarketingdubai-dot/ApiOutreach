@@ -35,6 +35,7 @@
 *   `revo_score` (Integer) - (0-100)
 *   `audit_notes` (Text) - Примечания системы (почему скор низкий)
 *   `custom_data` (JSONB) - гибкое поле для результатов AI-скрапинга (ответы LLM на кастомные вопросы)
+*   `is_unsubscribed` (Boolean) - Отписался ли лид от рассылки (чтобы не жечь домен)
 *   `created_at`, `updated_at` (DateTime)
 
 ### Таблица: `contacts`
@@ -46,6 +47,26 @@
 *   `contact_value` (String) - само значение контакта.
 *   `source` (String) - откуда взят (например: `gmaps`, `website`, `manual`)
 *   `is_primary` (Boolean) - является ли главным для связи.
+
+### Таблица: `outreach_campaigns`
+Хранит настройки Drip Campaigns (Холодный аутрич).
+*   `id` (UUID, PK)
+*   `name` (String) - Имя кампании (напр. "Barbershops Kyiv - Hidden Gems")
+*   `prompt_template` (Text) - Системный промпт для генерации писем (StoryBrand)
+*   `status` (Enum: DRAFT, ACTIVE, PAUSED, COMPLETED)
+*   `created_at` (DateTime)
+
+### Таблица: `email_sequences`
+Хранит воронку из 5 касаний для конкретного лида.
+*   `id` (UUID, PK)
+*   `lead_id` (UUID, FK -> leads.id)
+*   `campaign_id` (UUID, FK -> outreach_campaigns.id)
+*   `current_touch` (Integer) - Текущий шаг (1-5)
+*   `status` (Enum: DRAFT, QUEUED, SENT, OPENED, REPLIED, BOUNCED)
+*   `promo_status` (Enum: NONE, CODE_SENT, TRIAL_ACTIVE, CONVERTED, DROPPED, UNSUBSCRIBED)
+*   `next_send_date` (DateTime) - Когда отправить следующее письмо
+*   `email_content` (Text) - Сгенерированный текст (для ревью)
+*   `created_at`, `updated_at` (DateTime)
 
 ## 2. Логика Слияния Карточек (Entity Resolution / Deduplication)
 

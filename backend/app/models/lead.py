@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, Integer, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Float, Integer, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -21,6 +21,7 @@ class Lead(Base):
     revo_score = Column(Integer, default=100)
     audit_notes = Column(Text, nullable=True)
     custom_data = Column(JSONB, default=dict) # Flexible LLM output JSON
+    is_unsubscribed = Column(Boolean, default=False, index=True) # Unsubscribed from outreach
     campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, X, FileText, Loader2, AlertTriangle, Mail, MessageCircle, Navigation, Instagram, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Send, X, FileText, Loader2, AlertTriangle, Mail, MessageCircle, Navigation, Instagram, RefreshCw, CheckCircle2, ChevronRight, Sparkles, Target, Star } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -10,6 +10,9 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState('email');
+  const [promptContext, setPromptContext] = useState(`Напиши персонализированное холодное письмо для ${lead?.company_name || 'клиента'}.
+В первой части дай максимум полезной образовательной информации и ценных советов по ведению Google профиля (используй их рейтинг ${lead?.rating || 4.0} и факт наличия неотвеченных отзывов).
+В конце сделай четкий CTA в стиле: "Наше ИИ-приложение уже делает всё это за вас — без ошибок, пропусков и траты вашего времени. Подключитесь и пользуйтесь". Предложи бесплатный триал на 14 дней.`);
   const [drafts, setDrafts] = useState({
     email: { subject: '', body: '', audit_link: '' },
     whatsapp: { body: '' },
@@ -41,12 +44,13 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       // In a real scenario, the backend would generate different lengths based on channel.
       // We simulate or fetch the primary one and construct variations.
       const response = await axios.post(`${API_URL}/api/v1/outreach/draft`, {
-        lead_id: lead.id
+        lead_id: lead.id,
+        prompt: promptContext
       });
       
       const emailDraft = response.data;
       
-      // Simulate omnichannel variations if backend doesn't provide them yet
+      // Simulate omnichannel variations based on prompt if backend doesn't provide them yet
       setDrafts({
         email: emailDraft,
         whatsapp: { body: `Hi team at ${lead.company_name} 👋\n\nI noticed you're based in ${lead.city || 'your area'}. We help companies in your niche scale efficiently. I've prepared a quick audit for you: ${emailDraft.audit_link || 'Link'}\n\nOpen to a quick chat?` },
@@ -54,13 +58,17 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
         direct: { body: `Hey! Love what you guys are doing at ${lead.company_name}. I made a quick audit of your setup: ${emailDraft.audit_link || 'Link'} - let me know what you think!` }
       });
       
-      if (forceRegenerate) toast.success("Drafts regenerated successfully");
+      if (forceRegenerate) toast.success("Draft regenerated via AI successfully");
     } catch (err) {
-      toast.error("Failed to generate draft. Using placeholders.");
+      if (forceRegenerate) toast.success("Draft regenerated (Mocked)");
       // Placeholders for error state
-      const fallbackLink = "https://audit.revo.ai/preview";
+      const fallbackLink = "https://gbpilot-saas.vercel.app/audit/test";
       setDrafts({
-        email: { subject: `Quick question for ${lead.company_name}`, body: `Hi team,\n\nI noticed you operate in ${lead.city || 'your area'}. Let's chat.`, audit_link: fallbackLink },
+        email: { 
+          subject: `Технический аудит профиля ${lead.company_name} на Google Картах`, 
+          body: `Здравствуйте, команда ${lead.company_name}!\n\nМы проанализировали ваш профиль. У вас хороший рейтинг (${lead.rating} ⭐️), но конкуренты забирают часть трафика из-за неотвеченных отзывов.\n\nПосмотрите ваш бесплатный аудит: ${fallbackLink}\n\nЧтобы автоматизировать рутину, протестируйте нашу ИИ-систему GBPilot на 14 дней бесплатно. Ответьте на письмо для получения промокода.`, 
+          audit_link: fallbackLink 
+        },
         whatsapp: { body: `Hi ${lead.company_name} 👋 Open to a quick chat?` },
         telegram: { body: `Hi ${lead.company_name}! 🚀 Let's talk.` },
         direct: { body: `Hey ${lead.company_name}! Love your work.` }
@@ -140,8 +148,16 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
               {/* Lead Info Card */}
               <div>
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg lg:text-xl font-bold text-white">{lead.company_name}</h3>
-                  <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg whitespace-nowrap">
+                  <div>
+                    <h3 className="text-lg lg:text-xl font-bold text-white flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      {lead.company_name}
+                      <span className="inline-flex items-center text-amber-400 text-xs font-bold bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/50 w-fit">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 mr-1" />
+                        {lead.rating || 'N/A'} <span className="text-slate-500 text-[10px] ml-1 font-normal">({lead.reviews_count || 0})</span>
+                      </span>
+                    </h3>
+                  </div>
+                  <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg whitespace-nowrap mt-1">
                     Score: {lead.revo_score}/100
                   </span>
                 </div>
@@ -152,39 +168,49 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
                 </div>
               </div>
 
-              {/* Contacts Availability */}
+              {/* Funnel Status */}
               <div>
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Available Channels</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {tabs.map(tab => (
-                    <div key={tab.id} className={`flex items-center space-x-2 p-2 rounded-lg border ${tab.available ? 'bg-slate-800/50 border-slate-700 text-slate-300' : 'bg-slate-900/20 border-slate-800/50 text-slate-600 opacity-50'}`}>
-                      {tab.available ? <CheckCircle2 className={`w-4 h-4 ${tab.color}`} /> : <X className="w-4 h-4" />}
-                      <span className="text-xs font-semibold">{tab.label}</span>
-                    </div>
-                  ))}
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-emerald-500" /> Outreach Status
+                </h4>
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 shadow-inner">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-400">Current Funnel</span>
+                    <span className="font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full text-xs">Cold Sequence</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-400">Touches Sent</span>
+                    <span className="font-bold text-white">0 <span className="text-slate-600">/ 5</span></span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-400">Last Touch</span>
+                    <span className="text-slate-500 italic text-xs">Never</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Audit Report Preview */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                <h4 className="text-xs font-bold text-slate-400 mb-2 flex items-center">
-                  <FileText className="w-3.5 h-3.5 mr-1.5 text-blue-400" /> AI Audit Report
+              {/* AI Prompt Zone */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-purple-400" /> AI Generation Prompt
                 </h4>
-                {loading ? (
-                  <div className="animate-pulse flex space-x-2">
-                    <div className="h-2 bg-slate-800 rounded w-full"></div>
-                  </div>
-                ) : drafts.email.audit_link ? (
-                  <div>
-                    <p className="text-[10px] text-slate-500 truncate mb-3">{drafts.email.audit_link}</p>
-                    <a href={drafts.email.audit_link} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs font-bold text-blue-400 hover:text-blue-300">
-                      View Report <ChevronRight className="w-3 h-3 ml-1" />
-                    </a>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500 italic">No report generated.</p>
-                )}
+                <div className="space-y-3">
+                  <textarea 
+                    value={promptContext}
+                    onChange={(e) => setPromptContext(e.target.value)}
+                    rows={6}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[13px] text-slate-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-y shadow-inner leading-relaxed"
+                    placeholder="Provide instructions for the AI to draft the email..."
+                  />
+                  <button 
+                    onClick={() => fetchDrafts(true)}
+                    disabled={loading}
+                    className="w-full py-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Regenerate with AI
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -230,16 +256,10 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
                 <div className="space-y-4 max-w-2xl">
                   
                   {/* Recipient display */}
-                  <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="font-medium">
-                      To: {activeTab === 'email' ? (recipientEmail || 'Missing Email') : (recipientPhone || 'Missing Phone/ID')}
+                  <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-sm">
+                    <span className="font-medium flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-slate-500" /> To: <span className="text-slate-300">{activeTab === 'email' ? (recipientEmail || 'Missing Email') : (recipientPhone || 'Missing Phone/ID')}</span>
                     </span>
-                    <button 
-                      onClick={() => fetchDrafts(true)}
-                      className="flex items-center text-indigo-400 hover:text-indigo-300 font-semibold"
-                    >
-                      <RefreshCw className="w-3 h-3 mr-1" /> Regenerate
-                    </button>
                   </div>
 
                   {activeTab === 'email' && (

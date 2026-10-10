@@ -52,7 +52,7 @@ Design the optimal scraping campaign & custom variables to extract from company 
         
         errors = []
         if gemini_key:
-            for model in ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.6-flash"]:
+            for model in ["gemini-3.1-pro", "gemini-3.8-flash", "gemini-3.5-flash-lite"]:
                 try:
                     result = await AIStrategistService._call_gemini_api(gemini_key, model, prompt)
                     if result:
@@ -80,6 +80,9 @@ Design the optimal scraping campaign & custom variables to extract from company 
 
     @staticmethod
     async def _call_gemini_api(api_key: str, model: str, prompt: str) -> Dict[str, Any]:
+        from app.services.rate_limiter import wait_for_gemini_capacity
+        await wait_for_gemini_capacity()
+        
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         payload = {
             "contents": [

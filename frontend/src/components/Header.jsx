@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge } from 'lucide-react';
+import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
 export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId }) {
@@ -94,6 +94,31 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
               <GitMerge className="w-3.5 h-3.5" />
               <span>Merge Center</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('outreach')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'outreach'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Outreach</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('promotrack')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'promotrack'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" />
+              <span>Promo Track</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('admin')}
               className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
