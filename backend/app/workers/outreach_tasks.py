@@ -66,7 +66,7 @@ async def generate_email_with_groq(groq_key: str, lead: Lead, template: Outreach
         data = json.loads(raw_json)
         return data
 
-async def send_resend_email(resend_key: str, to_email: str, subject: str, html_body: str) -> bool:
+async def send_resend_email(resend_key: str, to_email: str, subject: str, html_body: str, lead_id: str) -> bool:
     resend.api_key = resend_key
     
     try:
@@ -74,7 +74,8 @@ async def send_resend_email(resend_key: str, to_email: str, subject: str, html_b
             "from": os.getenv("SENDER_EMAIL", "onboarding@resend.dev"),
             "to": to_email,
             "subject": subject,
-            "html": html_body
+            "html": html_body,
+            "tags": [{"name": "lead_id", "value": str(lead_id)}]
         })
         logger.info(f"Sent email to {to_email}. Resend ID: {r.get('id')}")
         return True
@@ -186,7 +187,7 @@ async def process_outreach_queue_async():
                 continue
 
             # 4. Send Email via Resend
-            success = await send_resend_email(resend_key, recipient_email, subject, body)
+            success = await send_resend_email(resend_key, recipient_email, subject, body, lead.id)
             
             # 5. Update Sequence State
             if success:
