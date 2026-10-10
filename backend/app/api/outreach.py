@@ -482,7 +482,7 @@ async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = De
         if replied: overall["replied"] += 1
         
         # Group by Funnel Type
-        f_type = seq.funnel_type.value
+        f_type = seq.funnel_type.value if hasattr(seq.funnel_type, "value") else str(seq.funnel_type or "CUSTOM")
         if f_type not in funnels_map:
             funnels_map[f_type] = {"name": f_type, "sent": 0, "opened": 0, "clicked": 0, "replied": 0}
         
@@ -492,9 +492,10 @@ async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = De
         if replied: funnels_map[f_type]["replied"] += 1
         
         # Group by Touch Level
-        t_level = seq.current_touch
+        t_level = seq.current_touch or 1
         if t_level not in touches_map:
             touches_map[t_level] = {"touch_level": t_level, "opened": 0, "clicked": 0}
+
         
         if opened: touches_map[t_level]["opened"] += 1
         if clicked: touches_map[t_level]["clicked"] += 1
