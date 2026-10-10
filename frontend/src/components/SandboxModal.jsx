@@ -51,11 +51,11 @@ export default function SandboxModal({ isOpen, onClose, lead }) {
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-64 border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col shrink-0">
+          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col shrink-0">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Select Persona</h3>
-            <div className="space-y-2 flex-1">
+            <div className="space-y-2 flex-1 flex flex-col md:block">
               {funnels.map(f => (
                 <button
                   key={f.id}
