@@ -203,7 +203,7 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
     requested_model = "gemini-3.8-flash"
     
     # Internal routing for the API gateway (maps 3.8 to 1.5 for the current v1beta endpoint)
-    api_model = "gemini-1.5-flash" if "3.8" in requested_model else requested_model
+    api_model = "gemini-1.5-flash-latest" if "3.8" in requested_model else requested_model
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{api_model}:generateContent?key={gemini_key}"
     
     try:
