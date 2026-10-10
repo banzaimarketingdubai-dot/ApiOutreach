@@ -90,17 +90,36 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
             for i in range(0, len(leads), batch_size):
                 chunk_leads = leads[i:i + batch_size]
                 site_batches = []
-                
-                # Extract text for this small batch concurrently
+                # Extract text for this small batch concurrently with a semaphore to prevent OOM
                 import asyncio
                 
+                sem = asyncio.Semaphore(3) # Max 3 concurrent headless browsers
+                
                 async def _extract_for_lead(l):
-                    t, err = await AIEnrichmentService.extract_website_text(l.website)
-                    return l, t, err
+                    async with sem:
+                        # Add a pre-log
+                        try:
+                            l_existing = dict(l.custom_data) if l.custom_data else {}
+                            if "ai_logs" not in l_existing:
+                                l_existing["ai_logs"] = []
+                            l_existing["ai_logs"].append(f"[INFO] 🕵️ AI is visiting {l.website}...")
+                            l.custom_data = l_existing
+                            from sqlalchemy.orm.attributes import flag_modified
+                            flag_modified(l, "custom_data")
+                            await db.commit()
+                        except:
+                            pass
+                            
+                        t, err = await AIEnrichmentService.extract_website_text(l.website)
+                        return l.id, l.website, t, err
                     
                 extraction_results = await asyncio.gather(*[_extract_for_lead(l) for l in chunk_leads])
                 
-                for lead, text, err_msg in extraction_results:
+                for l_id, l_website, text, err_msg in extraction_results:
+                    l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == str(l_id)))
+                    lead = l_res.scalars().first()
+                    if not lead: continue
+                    
                     if text:
                         site_batches.append({
                             "lead_id": str(lead.id),
@@ -110,7 +129,9 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                     else:
                         existing_custom = dict(lead.custom_data) if lead.custom_data else {}
                         existing_custom["enrichment_status"] = "failed"
-                        existing_custom["ai_logs"] = [f"[ERROR] {err_msg}"]
+                        if "ai_logs" not in existing_custom:
+                            existing_custom["ai_logs"] = []
+                        existing_custom["ai_logs"].append(f"[ERROR] {err_msg}")
                         lead.custom_data = existing_custom
                         from sqlalchemy.orm.attributes import flag_modified
                         flag_modified(lead, "custom_data")
@@ -139,13 +160,18 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                             existing_custom.update(extracted_results[lead_id])
                             if "ai_logs" not in existing_custom:
                                 existing_custom["ai_logs"] = []
-                            existing_custom["ai_logs"].append(f"[SUCCESS] Analyzed {target_lead.website} and extracted custom variables.")
+                            existing_custom["ai_logs"].append(f"[SUCCESS] 🧠 AI successfully analyzed {target_lead.website}")
                         else:
                             if "ai_logs" not in existing_custom:
                                 existing_custom["ai_logs"] = []
-                            existing_custom["ai_logs"].append(f"[WARNING] API Rate limit or parse failure for this batch.")
+                            existing_custom["ai_logs"].append(f"[WARNING] ⚠️ API Rate limit or parse failure for this batch.")
                             
                         existing_custom["enrichment_status"] = "completed"
+                        
+                        target_lead.custom_data = existing_custom
+                        from sqlalchemy.orm.attributes import flag_modified
+                        flag_modified(target_lead, "custom_data")
+                        await db.commit() # Save intermediate success
                         
                         # Auto-Check Messengers during enrichment
                         phone_to_check = target_lead.phone
@@ -179,11 +205,17 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                                 logger.error(f"Messenger check failed for {phone}: {e}")
 
                         if phone_to_check:
+                            if "ai_logs" not in existing_custom: existing_custom["ai_logs"] = []
+                            existing_custom["ai_logs"].append(f"[INFO] 🔍 Checking messengers for {phone_to_check}...")
+                            target_lead.custom_data = existing_custom
+                            flag_modified(target_lead, "custom_data")
+                            await db.commit() # Save intermediate log
+                            
                             await _check_msg(phone_to_check, existing_custom, target_lead.id)
                                 
                         target_lead.custom_data = existing_custom
-                        from sqlalchemy.orm.attributes import flag_modified
                         flag_modified(target_lead, "custom_data")
+                        await db.commit() # Commit messengers before heavy regex
                             
                         # Extract Emails via Regex
                         clean_text = item["text"].replace('\x00', '')
