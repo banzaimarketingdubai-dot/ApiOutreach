@@ -427,17 +427,29 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                       />
                     </td>
                     <td className="py-3.5 px-4 font-bold group-hover:text-blue-400">
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.company_name + ' ' + (lead.city || ''))}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-white hover:text-blue-400 flex items-center space-x-1.5"
-                        title="View on Google Maps"
-                      >
-                        <span className="truncate max-w-[150px] md:max-w-[250px] lg:max-w-[300px]" title={lead.company_name}>{lead.company_name}</span>
-                        <MapPin className="w-3.5 h-3.5 text-blue-500/70 flex-shrink-0" />
-                      </a>
+                      <div className="flex flex-col space-y-1.5">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.company_name + ' ' + (lead.city || ''))}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-white hover:text-blue-400 flex items-center space-x-1.5"
+                          title="View on Google Maps"
+                        >
+                          <span className="truncate max-w-[150px] md:max-w-[250px] lg:max-w-[300px]" title={lead.company_name}>{lead.company_name}</span>
+                          <MapPin className="w-3.5 h-3.5 text-blue-500/70 flex-shrink-0" />
+                        </a>
+                        <a 
+                          href={`https://gbpilot-saas.vercel.app/audit/${lead.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 font-semibold bg-indigo-500/10 border border-indigo-500/20 w-fit px-1.5 py-0.5 rounded transition-colors"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Audit Report</span>
+                        </a>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-slate-300">
                       <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[11px]">
