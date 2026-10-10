@@ -209,8 +209,8 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
     }
     
     import httpx
-    # Using gemini-3.8-flash as the fast/reliable model
-    api_model = "gemini-3.8-flash"
+    # Using gemini-2.5-flash as the fast/reliable model with higher free-tier limits
+    api_model = "gemini-2.5-flash"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{api_model}:generateContent?key={gemini_key}"
     
     try:
