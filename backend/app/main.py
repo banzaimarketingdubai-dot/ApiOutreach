@@ -29,6 +29,9 @@ async def lifespan(app: FastAPI):
                 await conn.execute(text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;"))
                 await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;"))
                 await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_unsubscribed BOOLEAN DEFAULT FALSE;"))
+                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP WITH TIME ZONE;"))
+                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;"))
+
             except Exception as e:
                 logger.info(f"Alter table migrations failed or already exists: {e}")
         
