@@ -176,6 +176,7 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
     You are an expert B2B SaaS copywriter. Your goal is to write highly converting outreach messages.
     Generate a JSON response containing drafts for 'email' (with subject and body), 'whatsapp', 'telegram', and 'direct'.
     The email body should be in HTML format (using simple tags like <p>, <strong>, <br>).
+    CRITICAL INSTRUCTION: You MUST write all messages (email, whatsapp, telegram, direct, subject) in the exact same language as the User Instruction below. If the user instruction is in Russian, you must output Russian.
     You MUST embed this exact image HTML in the email body where appropriate to show their audit snapshot:
     <p style="text-align: center; margin: 25px 0;"><a href="{audit_link}" target="_blank"><img src="{snapshot_img_url}" alt="Audit" style="width: 100%; max-width: 500px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" /></a></p>
     
