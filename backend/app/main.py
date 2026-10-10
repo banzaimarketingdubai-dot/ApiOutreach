@@ -69,8 +69,13 @@ async def lifespan(app: FastAPI):
                 await conn.execute(text("ALTER TYPE campaignstatus ADD VALUE IF NOT EXISTS 'CANCELLED';"))
             except Exception:
                 pass
+            try:
+                await conn.execute(text("ALTER TYPE funneltype ADD VALUE IF NOT EXISTS 'EMPATHY_AUDIT';"))
+            except Exception:
+                pass
             
         logger.info("Database tables initialized successfully.")
+
     except Exception as e:
         logger.warning(f"Database table initialization skipped/warning: {e}")
     yield
