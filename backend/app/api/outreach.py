@@ -191,7 +191,7 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
     system_instruction += '\n\nYou MUST return a valid JSON object matching this schema exactly:\n{"subject": "str", "email_body": "str", "whatsapp": "str", "telegram": "str", "direct": "str"}'
     
     payload = {
-        "model": "llama3-8b-8192",
+        "model": "openai/gpt-oss-120b",
         "messages": [
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": user_instruction}
