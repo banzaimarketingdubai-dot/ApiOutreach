@@ -27,3 +27,4 @@ class Lead(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     contacts = relationship("Contact", back_populates="lead", cascade="all, delete-orphan", lazy="selectin")
+    email_sequences = relationship("EmailSequence", back_populates="lead", cascade="all, delete-orphan", lazy="selectin")

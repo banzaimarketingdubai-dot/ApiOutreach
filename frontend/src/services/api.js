@@ -231,3 +231,32 @@ export async function deleteTemplate(id) {
   if (!res.ok) throw new Error('Failed to delete template');
   return res.json();
 }
+
+// Funnel Management
+export async function startFunnel(lead_ids, funnel_type) {
+  return apiCall(`${API_BASE}/outreach/funnels/start`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids, funnel_type })
+  });
+}
+
+export async function pauseFunnel(lead_ids) {
+  return apiCall(`${API_BASE}/outreach/funnels/pause`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids })
+  });
+}
+
+export async function resumeFunnel(lead_ids) {
+  return apiCall(`${API_BASE}/outreach/funnels/resume`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids })
+  });
+}
+
+export async function overrideFunnel(lead_id, email_subject, email_content) {
+  return apiCall(`${API_BASE}/outreach/funnels/override`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_id, email_subject, email_content })
+  });
+}

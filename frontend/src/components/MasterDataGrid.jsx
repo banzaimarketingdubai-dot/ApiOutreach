@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon } from 'lucide-react';
-import { getExportCsvUrl, checkMessengers, exportLeadRadar } from '../services/api';
+import { getExportCsvUrl, checkMessengers, exportLeadRadar, startFunnel, pauseFunnel, resumeFunnel } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
 import OmnichannelOutreachModal from './OmnichannelOutreachModal';
+import FunnelSetupModal from './FunnelSetupModal';
 
 export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh, pagination = { total: 0, total_pages: 1, page: 1 } }) {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [selectAllGlobal, setSelectAllGlobal] = useState(false);
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
+  const [funnelModalOpen, setFunnelModalOpen] = useState(false);
   const [outreachLead, setOutreachLead] = useState(null);
   const [isCheckingMessengers, setIsCheckingMessengers] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -200,6 +202,34 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
             </>
           )}
 
+          {selectedCount > 0 && (
+            <>
+              <button
+                onClick={() => setFunnelModalOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 text-xs font-semibold border border-indigo-500/30 transition-all mr-2"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Start Funnel</span>
+              </button>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    await pauseFunnel(selectedLeads.map(l => l.id));
+                    setSelectedLeads([]);
+                    if (onRefresh) onRefresh();
+                  } catch (e) {
+                    alert('Error pausing funnels');
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 text-xs font-semibold border border-orange-500/30 transition-all mr-2"
+              >
+                <XOctagon className="w-3.5 h-3.5" />
+                <span>Pause</span>
+              </button>
+            </>
+          )}
+
           <select
             value={filters.city || ''}
             onChange={(e) => setFilters({ ...filters, city: e.target.value, page: 1, page_size: e.target.value ? 500 : 50 })}
@@ -362,6 +392,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
               <th className="py-3 px-4 cursor-pointer hover:bg-slate-800/50 group transition-colors select-none" onClick={() => handleSort('revo_score')}>
                 Revo Score {getSortIcon('revo_score')}
               </th>
+              <th className="py-3 px-4 text-center">Funnel</th>
               <th className="py-3 px-4">Contacts Found</th>
               <th className="py-3 px-4 text-right">Action</th>
             </tr>
@@ -434,6 +465,25 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                           {lead.revo_score}/100
                         </span>
                       </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {lead.email_sequences && lead.email_sequences.length > 0 ? (
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                            lead.email_sequences[0].status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                            lead.email_sequences[0].status === 'PAUSED' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                            lead.email_sequences[0].status === 'REPLIED' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
+                            lead.email_sequences[0].status === 'QUEUED' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
+                            lead.email_sequences[0].status === 'UNSUBSCRIBED' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-slate-800 text-slate-400'
+                          }`}>
+                            {lead.email_sequences[0].status}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium">Touch {lead.email_sequences[0].current_touch}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-600">None</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
@@ -566,8 +616,29 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
       {crmModalOpen && (
         <CRMExportModal 
-          leads={leads}
+          isOpen={crmModalOpen}
           onClose={() => setCrmModalOpen(false)}
+          selectedCount={selectedCount}
+          selectAllGlobal={selectAllGlobal}
+          filters={filters}
+          selectedLeadIds={selectedLeads.map(l => l.id)}
+          onSuccess={() => {
+            setSelectedLeads([]);
+            setSelectAllGlobal(false);
+          }}
+        />
+      )}
+
+      {funnelModalOpen && (
+        <FunnelSetupModal
+          isOpen={funnelModalOpen}
+          onClose={() => setFunnelModalOpen(false)}
+          selectedCount={selectedCount}
+          selectedLeadIds={selectedLeads.map(l => l.id)}
+          onSuccess={() => {
+            setSelectedLeads([]);
+            if (onRefresh) onRefresh();
+          }}
         />
       )}
 

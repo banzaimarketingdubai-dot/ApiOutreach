@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Send, X, FileText, Loader2, AlertTriangle, Mail, MessageCircle, Navigation, Instagram, RefreshCw, CheckCircle2, ChevronRight, Sparkles, Target, Star } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { apiCall } from '../services/api';
+import { apiCall, overrideFunnel } from '../services/api';
 
 export default function OmnichannelOutreachModal({ lead, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -91,16 +91,9 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       setSending(true);
       if (activeTab === 'email') {
         if (!recipientEmail) return toast.error("No recipient email found.");
-        await apiCall('/api/v1/outreach/send', {
-          method: 'POST',
-          body: JSON.stringify({
-            lead_id: lead.id,
-            recipient_email: recipientEmail,
-            subject: drafts.email.subject,
-            body: drafts.email.body
-          })
-        });
-        toast.success("Email sent successfully!");
+        await overrideFunnel(lead.id, drafts.email.subject, drafts.email.body);
+        toast.success(`Override sent to ${recipientEmail} via Resend!`);
+        setTimeout(onClose, 1500);
       } else {
         // Simulate pushing to CRM/LeadRadar or opening Web WhatsApp
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -175,26 +168,22 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
                 </div>
               </div>
 
-              {/* Funnel Status */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-emerald-500" /> Outreach Status
-                </h4>
-                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 shadow-inner">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Current Funnel</span>
-                    <span className="font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full text-xs">Cold Sequence</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Touches Sent</span>
-                    <span className="font-bold text-white">0 <span className="text-slate-600">/ 5</span></span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Last Touch</span>
-                    <span className="text-slate-500 italic text-xs">Never</span>
+              {/* Funnel Status / Override Warning */}
+              {lead?.email_sequences?.length > 0 && lead.email_sequences[0].status === 'ACTIVE' && (
+                <div>
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start space-x-3 shadow-inner">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <h4 className="text-[13px] font-bold text-amber-400">Sequence Override Warning</h4>
+                      <p className="text-[11px] text-amber-200/70 mt-1 leading-tight">
+                        This lead is in an active sequence (<strong>Touch {lead.email_sequences[0].current_touch}</strong>). 
+                        Sending this manual message will <strong>PAUSE</strong> the automatic sequence.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
 
               {/* AI Prompt Zone */}
               <div>

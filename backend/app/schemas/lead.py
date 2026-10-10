@@ -4,6 +4,15 @@ from datetime import datetime
 from pydantic import BaseModel
 from app.schemas.contact import ContactResponse, ContactCreate
 
+class EmailSequenceBase(BaseModel):
+    id: UUID
+    funnel_type: str
+    current_touch: int
+    status: str
+    
+    class Config:
+        from_attributes = True
+
 class LeadBase(BaseModel):
     company_name: str
     business_type: Optional[str] = None
@@ -37,6 +46,7 @@ class LeadResponse(LeadBase):
     id: UUID
     campaign_id: Optional[UUID] = None
     contacts: List[ContactResponse] = []
+    email_sequences: List[EmailSequenceBase] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
