@@ -192,8 +192,13 @@ async def list_leads(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Lead)
+    from sqlalchemy.orm import selectinload
+    stmt = select(Lead).options(
+        selectinload(Lead.contacts),
+        selectinload(Lead.email_sequences)
+    )
     filters_dict = {
+
         "niche": niche, "city": city, "has_website": has_website,
         "min_score": min_score, "min_rating": min_rating, "max_rating": max_rating,
         "search": search, "campaign_id": campaign_id,
@@ -241,12 +246,17 @@ async def get_lead(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Lead).where(Lead.id == lead_id)
+    from sqlalchemy.orm import selectinload
+    stmt = select(Lead).options(
+        selectinload(Lead.contacts),
+        selectinload(Lead.email_sequences)
+    ).where(Lead.id == lead_id)
     res = await db.execute(stmt)
     lead = res.scalars().first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     return lead
+
 
 @router.post("", response_model=LeadResponse)
 async def create_lead(
