@@ -33,23 +33,28 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             from sqlalchemy import text
-            try:
-                await conn.execute(text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;"))
-                await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;"))
-                await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_unsubscribed BOOLEAN DEFAULT FALSE;"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS funnel_type VARCHAR(100) DEFAULT 'EMPATHY_AUDIT';"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS current_touch INTEGER DEFAULT 1;"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS promo_status VARCHAR(50) DEFAULT 'INITIAL_AUDIT';"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS next_send_date TIMESTAMP WITH TIME ZONE;"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_subject VARCHAR(255);"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_content TEXT;"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP WITH TIME ZONE;"))
-                await conn.execute(text("ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;"))
+            
+            statements = [
+                "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;",
+                "ALTER TABLE leads ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;",
+                "ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_unsubscribed BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS funnel_type VARCHAR(100) DEFAULT 'EMPATHY_AUDIT';",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS current_touch INTEGER DEFAULT 1;",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS promo_status VARCHAR(50) DEFAULT 'INITIAL_AUDIT';",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS next_send_date TIMESTAMP WITH TIME ZONE;",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_subject VARCHAR(255);",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_content TEXT;",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP WITH TIME ZONE;",
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;"
+            ]
+            
+            for stmt_text in statements:
+                try:
+                    await conn.execute(text(stmt_text))
+                except Exception as stmt_err:
+                    logger.warning(f"Migration statement skipped ({stmt_text}): {stmt_err}")
 
-
-            except Exception as e:
-                logger.info(f"Alter table migrations failed or already exists: {e}")
         
         # Postgres ALTER TYPE cannot run inside a transaction block
         async with engine.connect() as conn:
