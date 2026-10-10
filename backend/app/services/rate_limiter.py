@@ -3,8 +3,8 @@ import asyncio
 import os
 from redis.asyncio import Redis
 
-# Reuse existing REDIS_URL from Celery if available, or default to localhost
-REDIS_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+# Reuse REDIS_URL from Railway or fallback to CELERY_BROKER_URL or localhost
+REDIS_URL = os.getenv("REDIS_URL", os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"))
 redis_client = Redis.from_url(REDIS_URL)
 
 async def wait_for_gemini_capacity():
