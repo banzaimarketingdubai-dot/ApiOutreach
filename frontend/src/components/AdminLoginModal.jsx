@@ -126,7 +126,7 @@ export default function AdminLoginModal({ onLoginSuccess }) {
               <span>Войти через Google Account (ceo@gbpilot.top)</span>
             </button>
 
-            <div id="googleSignInBtn" className="w-full min-h-[40px]"></div>
+            <div id="googleSignInBtn" className="w-full flex justify-center min-h-[40px]"></div>
 
             <div className="relative flex items-center justify-center my-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
