@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target } from 'lucide-react';
+import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target, BarChart2 } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
 export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId }) {
@@ -117,6 +117,18 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
             >
               <Target className="w-3.5 h-3.5" />
               <span>Promo Track</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              <span>Analytics</span>
             </button>
 
             <button

@@ -9,6 +9,7 @@ import MergeCenter from './components/MergeCenter';
 import AdminPanel from './components/AdminPanel';
 import OutreachBuilder from './components/OutreachBuilder';
 import PromoTrack from './components/PromoTrack';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {
@@ -127,6 +128,9 @@ export default function App() {
           <PromoTrack 
             onSelectLead={(lead) => setSelectedLead(lead)} 
           />
+        )}
+        {activeTab === 'analytics' && (
+          <AnalyticsDashboard globalCampaignId={globalCampaignId} />
         )}
 
       </main>

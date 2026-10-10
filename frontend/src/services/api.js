@@ -274,3 +274,8 @@ export async function generateSandboxFunnel(lead_id, funnel_type) {
     body: JSON.stringify({ lead_id, funnel_type })
   });
 }
+
+export async function fetchAnalytics(campaignId) {
+  const query = campaignId ? `?campaign_id=${campaignId}` : '';
+  return apiCall(`${API_BASE}/outreach/analytics${query}`);
+}
