@@ -7,7 +7,8 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
     include=[
         "app.workers.scraping_tasks",
-        "app.workers.enrichment_tasks"
+        "app.workers.enrichment_tasks",
+        "app.workers.outreach_tasks"
     ]
 )
 
@@ -21,3 +22,12 @@ celery_app.conf.update(
     worker_concurrency=2,
     worker_max_tasks_per_child=50
 )
+
+# Celery Beat Schedule
+from celery.schedules import crontab
+celery_app.conf.beat_schedule = {
+    'process-outreach-queue-every-5-minutes': {
+        'task': 'app.workers.outreach_tasks.process_outreach_queue',
+        'schedule': crontab(minute='*/5'),
+    },
+}
