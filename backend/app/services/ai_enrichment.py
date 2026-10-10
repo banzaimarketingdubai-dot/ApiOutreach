@@ -19,7 +19,7 @@ class AIEnrichmentService:
             url = "https://" + url
             
         # Social Media & CRM Filter
-        social_domains = ['instagram.com', 'facebook.com', 't.me', 'vk.com', 'linkedin.com', 'twitter.com', 'x.com', 'fresha.com', 'booksy.com', 'calendly.com', 'dikidi.net', 'wa.me']
+        social_domains = ['instagram.com', 'facebook.com', 't.me', 'vk.com', 'linkedin.com', 'twitter.com', 'x.com', 'fresha.com', 'booksy.com', 'calendly.com', 'dikidi.net', 'wa.me', 'alteg.io', 'yclients.com']
         if any(domain in url.lower() for domain in social_domains):
             return "", f"Social Media or CRM link ignored. Specialized scraper required."
             
@@ -44,7 +44,10 @@ class AIEnrichmentService:
                     soup = BeautifulSoup(resp.text, 'html.parser')
                     for script in soup(["script", "style", "nav", "footer"]):
                         script.decompose()
-                    return soup.get_text(separator=' ', strip=True)[:4000], ""
+                    clean_text = soup.get_text(separator=' ', strip=True)[:4000]
+                    if clean_text:
+                        return clean_text, ""
+                    return "", "Website returned empty HTML (probably JS-rendered SPA)"
                 return "", f"Website returned status code {resp.status_code}"
         except Exception as e:
             return "", f"Connection failed or Timeout: {str(e)}"
