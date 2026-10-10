@@ -22,7 +22,7 @@ export default function AdminLoginModal({ onLoginSuccess }) {
           });
           window.google.accounts.id.renderButton(
             document.getElementById('googleSignInBtn'),
-            { theme: 'filled_blue', size: 'large', width: '100%', text: 'continue_with' }
+            { theme: 'filled_blue', size: 'large', width: 384, text: 'continue_with' }
           );
           clearInterval(intervalId);
         } catch (err) {
