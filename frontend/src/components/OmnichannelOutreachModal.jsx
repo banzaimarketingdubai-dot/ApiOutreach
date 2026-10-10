@@ -285,11 +285,13 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                       {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Message Body
                     </label>
-                    <textarea 
-                      value={drafts[activeTab]?.body || ''}
-                      onChange={(e) => setDrafts({...drafts, [activeTab]: {...drafts[activeTab], body: e.target.value}})}
-                      rows={activeTab === 'email' ? 12 : 6}
-                      className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-300 font-sans leading-relaxed resize-y"
+                    <div 
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => setDrafts({...drafts, [activeTab]: {...drafts[activeTab], body: e.target.innerHTML}})}
+                      dangerouslySetInnerHTML={{ __html: drafts[activeTab]?.body || '' }}
+                      className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-300 font-sans leading-relaxed overflow-y-auto [&>p]:mb-4 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-4 [&>strong]:text-white [&>a]:text-blue-400 [&_img]:rounded-xl"
+                      style={{ minHeight: activeTab === 'email' ? '250px' : '150px', maxHeight: '400px' }}
                     />
                     <p className="text-[10px] text-slate-500 mt-2">
                       Personalized variables (Niche, City, Company) have been injected by AI based on {lead.rating}⭐ profile.
