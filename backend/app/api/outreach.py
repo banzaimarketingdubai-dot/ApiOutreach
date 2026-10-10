@@ -224,8 +224,9 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
                 "direct": data.get("direct", "")
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 # =======================
 # Webhooks
 # =======================
