@@ -255,10 +255,24 @@ async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_
         leads = leads_res.scalars().all()
         
         count = 0
-        camp_res = await db.execute(select(OutreachCampaign.id))
-        default_campaign_id = camp_res.scalars().first()
+        camp_res = await db.execute(select(OutreachCampaign))
+        first_camp = camp_res.scalars().first()
+        
+        if not first_camp:
+            first_camp = OutreachCampaign(
+                name="Global Outreach Campaign",
+                prompt_template="Standard GBPilot B2B Outreach",
+                filters={},
+                status=OutreachStatus.ACTIVE
+            )
+            db.add(first_camp)
+            await db.commit()
+            await db.refresh(first_camp)
+            
+        default_campaign_id = first_camp.id
 
         for lead in leads:
+
             # Stop existing sequence
             await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead.id).values(status=EmailSequenceStatus.PAUSED))
             
