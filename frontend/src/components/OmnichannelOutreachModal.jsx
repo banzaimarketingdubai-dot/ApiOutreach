@@ -65,18 +65,17 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       
       if (forceRegenerate) toast.success("Draft regenerated via AI successfully");
     } catch (err) {
-      if (forceRegenerate) toast.success("Draft regenerated (Mocked)");
-      // Placeholders for error state
-      const fallbackLink = "https://gbpilot-saas.vercel.app/audit/test";
+      if (forceRegenerate) toast.error(`Generation failed: ${err.message}`);
+      
       setDrafts({
         email: { 
-          subject: `Технический аудит профиля ${lead.company_name} на Google Картах`, 
-          body: `Здравствуйте, команда ${lead.company_name}!\n\nМы проанализировали ваш профиль. У вас хороший рейтинг (${lead.rating} ⭐️), но конкуренты забирают часть трафика из-за неотвеченных отзывов.\n\nПосмотрите ваш бесплатный аудит: ${fallbackLink}\n\nЧтобы автоматизировать рутину, протестируйте нашу ИИ-систему GBPilot на 14 дней бесплатно. Ответьте на письмо для получения промокода.`, 
-          audit_link: fallbackLink 
+          subject: `Error generating draft`, 
+          body: `AI Generation failed.\n\nError details:\n${err.message}\n\nPlease check the backend logs or API keys.`, 
+          audit_link: "" 
         },
-        whatsapp: { body: `Hi ${lead.company_name} 👋 Open to a quick chat?` },
-        telegram: { body: `Hi ${lead.company_name}! 🚀 Let's talk.` },
-        direct: { body: `Hey ${lead.company_name}! Love your work.` }
+        whatsapp: { body: `AI Generation failed: ${err.message}` },
+        telegram: { body: `AI Generation failed: ${err.message}` },
+        direct: { body: `AI Generation failed: ${err.message}` }
       });
     } finally {
       setLoading(false);
