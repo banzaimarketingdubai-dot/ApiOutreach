@@ -27,8 +27,10 @@ async def lifespan(app: FastAPI):
             from sqlalchemy import text
             try:
                 await conn.execute(text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;"))
+                await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;"))
+                await conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_unsubscribed BOOLEAN DEFAULT FALSE;"))
             except Exception as e:
-                logger.info(f"Alter table logs failed or already exists: {e}")
+                logger.info(f"Alter table migrations failed or already exists: {e}")
         
         # Postgres ALTER TYPE cannot run inside a transaction block
         async with engine.connect() as conn:
