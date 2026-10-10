@@ -17,7 +17,7 @@ export default function AdminLoginModal({ onLoginSuccess }) {
       if (window.google?.accounts?.id) {
         try {
           window.google.accounts.id.initialize({
-            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1029384756-sample.apps.googleusercontent.com',
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1025915570314-u36sfq2t3h689rkcpabfen7f3o5nqh3v.apps.googleusercontent.com',
             callback: handleGoogleResponse
           });
           window.google.accounts.id.renderButton(
