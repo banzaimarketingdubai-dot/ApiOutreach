@@ -232,6 +232,90 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 # =======================
+# Funnel Management (Sprint 1)
+# =======================
+class FunnelActionRequest(BaseModel):
+    lead_ids: List[str]
+    funnel_type: Optional[str] = None # For start
+
+@router.post("/funnels/start")
+async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_db)):
+    """Starts a drip funnel for the selected leads."""
+    from app.models.email_sequence import FunnelType
+    if not req.funnel_type:
+        raise HTTPException(status_code=400, detail="funnel_type is required")
+        
+    leads_res = await db.execute(select(Lead).filter(Lead.id.in_(req.lead_ids), Lead.is_unsubscribed == False))
+    leads = leads_res.scalars().all()
+    
+    count = 0
+    for lead in leads:
+        # Stop existing sequence
+        await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead.id).values(status=EmailSequenceStatus.PAUSED))
+        
+        # Create new active sequence
+        new_seq = EmailSequence(
+            lead_id=lead.id,
+            funnel_type=req.funnel_type,
+            status=EmailSequenceStatus.ACTIVE,
+            current_touch=1,
+            next_send_date=func.now()
+        )
+        db.add(new_seq)
+        count += 1
+        
+    await db.commit()
+    return {"status": "success", "started": count}
+
+@router.post("/funnels/pause")
+async def pause_funnels(req: FunnelActionRequest, db: AsyncSession = Depends(get_db)):
+    """Pauses active funnels for the selected leads."""
+    res = await db.execute(
+        update(EmailSequence)
+        .where(EmailSequence.lead_id.in_(req.lead_ids), EmailSequence.status == EmailSequenceStatus.ACTIVE)
+        .values(status=EmailSequenceStatus.PAUSED)
+    )
+    await db.commit()
+    return {"status": "success", "message": "Funnels paused."}
+
+@router.post("/funnels/resume")
+async def resume_funnels(req: FunnelActionRequest, db: AsyncSession = Depends(get_db)):
+    """Resumes paused funnels for the selected leads."""
+    res = await db.execute(
+        update(EmailSequence)
+        .where(EmailSequence.lead_id.in_(req.lead_ids), EmailSequence.status == EmailSequenceStatus.PAUSED)
+        .values(status=EmailSequenceStatus.ACTIVE)
+    )
+    await db.commit()
+    return {"status": "success", "message": "Funnels resumed."}
+
+class OverrideRequest(BaseModel):
+    lead_id: str
+    email_subject: str
+    email_content: str
+    
+@router.post("/funnels/override")
+async def override_funnel(req: OverrideRequest, db: AsyncSession = Depends(get_db)):
+    """Overrides any active funnel and sends a custom manual email immediately."""
+    # Pause active
+    await db.execute(update(EmailSequence).where(EmailSequence.lead_id == req.lead_id).values(status=EmailSequenceStatus.PAUSED))
+    
+    # Create custom sequence ready to send immediately
+    from app.models.email_sequence import FunnelType
+    new_seq = EmailSequence(
+        lead_id=req.lead_id,
+        funnel_type=FunnelType.CUSTOM,
+        status=EmailSequenceStatus.QUEUED, # Picked up by sender immediately
+        current_touch=1,
+        email_subject=req.email_subject,
+        email_content=req.email_content,
+        next_send_date=func.now()
+    )
+    db.add(new_seq)
+    await db.commit()
+    return {"status": "success", "message": "Custom sequence override created."}
+
+# =======================
 # Webhooks
 # =======================
 @router.get("/webhooks/unsubscribe")

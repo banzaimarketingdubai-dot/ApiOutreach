@@ -6,13 +6,23 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
+class FunnelType(str, enum.Enum):
+    HIDDEN_GEMS = "HIDDEN_GEMS"
+    SINKING_GIANTS = "SINKING_GIANTS"
+    GHOSTS = "GHOSTS"
+    CUSTOM = "CUSTOM"
+
 class EmailSequenceStatus(str, enum.Enum):
     DRAFT = "DRAFT"         # Awaiting user approval
     QUEUED = "QUEUED"       # Approved, waiting for Celery to send
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
     SENT = "SENT"
     OPENED = "OPENED"
     REPLIED = "REPLIED"     # Hot Lead
     BOUNCED = "BOUNCED"
+    UNSUBSCRIBED = "UNSUBSCRIBED"
+    COMPLETED = "COMPLETED"
 
 class PromoTrackStatus(str, enum.Enum):
     NONE = "NONE"
@@ -27,7 +37,8 @@ class EmailSequence(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     lead_id = Column(UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True)
-    campaign_id = Column(UUID(as_uuid=True), ForeignKey("outreach_campaigns.id", ondelete="CASCADE"), nullable=False)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("outreach_campaigns.id", ondelete="CASCADE"), nullable=True)
+    funnel_type = Column(SQLEnum(FunnelType, native_enum=False), default=FunnelType.CUSTOM, nullable=False, index=True)
     
     current_touch = Column(Integer, default=1) # Which step of the 5-touch funnel
     status = Column(SQLEnum(EmailSequenceStatus, native_enum=False), default=EmailSequenceStatus.DRAFT, nullable=False, index=True)
@@ -43,3 +54,16 @@ class EmailSequence(Base):
     # Optional relationships
     lead = relationship("Lead")
     campaign = relationship("OutreachCampaign")
+
+class OutreachTemplate(Base):
+    __tablename__ = "outreach_templates"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    funnel_type = Column(SQLEnum(FunnelType, native_enum=False), nullable=False)
+    touch_level = Column(Integer, nullable=False) # 1 to 5
+    subject_template = Column(String, nullable=False)
+    body_template = Column(Text, nullable=False)
+    ai_prompt_context = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
