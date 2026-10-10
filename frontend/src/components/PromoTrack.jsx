@@ -148,7 +148,7 @@ export default function PromoTrack({ onSelectLead }) {
                     {lead.status === 'TRIAL_ACTIVE' ? (
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden w-24">
-                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: \`\${(lead.day / 14) * 100}%\` }}></div>
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(lead.day / 14) * 100}%` }}></div>
                         </div>
                         <span className="text-xs font-mono text-slate-400">Day {lead.day}/14</span>
                       </div>
