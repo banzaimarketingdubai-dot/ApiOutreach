@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target, BarChart2 } from 'lucide-react';
+import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target, BarChart2, Shield } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
 export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId, user, onLogout }) {
@@ -129,6 +129,20 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
               <Wallet className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">Settings</span>
             </button>
+            
+            {user?.role === 'SUPER_ADMIN' && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  activeTab === 'users'
+                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                    : 'text-violet-400 hover:text-violet-300 hover:bg-slate-800/50'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Команда</span>
+              </button>
+            )}
           </nav>
         </div>
 

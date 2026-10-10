@@ -11,6 +11,7 @@ import OutreachBuilder from './components/OutreachBuilder';
 import PromoTrack from './components/PromoTrack';
 import AdminLoginModal from './components/AdminLoginModal';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import UserManagementDashboard from './components/UserManagementDashboard';
 import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {
@@ -166,6 +167,9 @@ export default function App() {
         )}
         {activeTab === 'analytics' && (
           <AnalyticsDashboard globalCampaignId={globalCampaignId} />
+        )}
+        {activeTab === 'users' && user?.role === 'SUPER_ADMIN' && (
+          <UserManagementDashboard />
         )}
 
       </main>

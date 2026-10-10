@@ -255,3 +255,34 @@ export async function fetchAnalytics(campaignId) {
   const query = campaignId ? `?campaign_id=${campaignId}` : '';
   return apiCall(`${API_BASE}/outreach/analytics${query}`);
 }
+
+// =============== USERS MANAGEMENT (SUPER_ADMIN) ===============
+export async function fetchUsers() {
+  return apiCall(`${API_BASE}/users`);
+}
+
+export async function updateUserRole(userId, role) {
+  return apiCall(`${API_BASE}/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role })
+  });
+}
+
+export async function inviteUser(email, role) {
+  return apiCall(`${API_BASE}/users/invite`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role })
+  });
+}
+
+export async function deleteUser(userId) {
+  const res = await fetch(`${API_BASE}/users/${userId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'API request failed');
+  }
+  return true;
+}
