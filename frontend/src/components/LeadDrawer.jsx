@@ -175,6 +175,9 @@ export default function LeadDrawer({ lead, onClose }) {
                     {lead.custom_data?.enrichment_status === 'no_website' && (
                       <div className="text-slate-400">[{new Date().toISOString()}] [WARNING] No website provided. Skipped.</div>
                     )}
+                    {lead.custom_data?.enrichment_status === 'social_only' && (
+                      <div className="text-pink-400">[{new Date().toISOString()}] [WARNING] Social media link ignored. Requires specialized scraper.</div>
+                    )}
                   </>
                 ) : (
                   <div className="text-red-400">[{new Date().toISOString()}] [ERROR] No website provided. Aborting AI enrichment.</div>

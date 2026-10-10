@@ -134,6 +134,8 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         existing_custom = dict(lead.custom_data) if lead.custom_data else {}
                         if "Empty URL" in err_msg:
                             existing_custom["enrichment_status"] = "no_website"
+                        elif "Social Media" in err_msg:
+                            existing_custom["enrichment_status"] = "social_only"
                         else:
                             existing_custom["enrichment_status"] = "failed"
                         if "ai_logs" not in existing_custom:
