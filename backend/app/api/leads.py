@@ -113,11 +113,28 @@ def apply_lead_filters(stmt, filters_dict: dict):
     if city: filters.append(Lead.city.ilike(f"%{city}%"))
     if has_website is True: filters.append(and_(Lead.website.isnot(None), Lead.website != ""))
     elif has_website is False: filters.append(or_(Lead.website.is_(None), Lead.website == ""))
-    if min_score is not None and min_score != "": filters.append(Lead.revo_score >= int(min_score))
-    if min_rating is not None and min_rating != "": filters.append(Lead.rating >= float(min_rating))
-    if max_rating is not None and max_rating != "": filters.append(Lead.rating <= float(max_rating))
-    if campaign_id: filters.append(Lead.campaign_id == campaign_id)
-    if search: filters.append(or_(Lead.company_name.ilike(f"%{search}%"), Lead.address.ilike(f"%{search}%"), Lead.website.ilike(f"%{search}%")))
+    def _to_int(val):
+        try:
+            return int(val) if val is not None and not str(val).startswith("FastAPI") and not hasattr(val, 'default') else None
+        except (ValueError, TypeError):
+            return None
+
+    def _to_float(val):
+        try:
+            return float(val) if val is not None and not str(val).startswith("FastAPI") and not hasattr(val, 'default') else None
+        except (ValueError, TypeError):
+            return None
+
+    min_score_val = _to_int(min_score)
+    min_rating_val = _to_float(min_rating)
+    max_rating_val = _to_float(max_rating)
+
+    if min_score_val is not None: filters.append(Lead.revo_score >= min_score_val)
+    if min_rating_val is not None: filters.append(Lead.rating >= min_rating_val)
+    if max_rating_val is not None: filters.append(Lead.rating <= max_rating_val)
+    if campaign_id and not hasattr(campaign_id, 'default'): filters.append(Lead.campaign_id == campaign_id)
+    if search and isinstance(search, str) and search.strip(): filters.append(or_(Lead.company_name.ilike(f"%{search}%"), Lead.address.ilike(f"%{search}%"), Lead.website.ilike(f"%{search}%")))
+
 
     if has_whatsapp is True: 
         filters.append(or_(
@@ -186,12 +203,16 @@ async def list_leads(
     }
     stmt = apply_lead_filters(stmt, filters_dict)
 
+    sort_by_str = sort_by if isinstance(sort_by, str) else "created_at"
+    sort_order_str = sort_order if isinstance(sort_order, str) else "desc"
+
     # Apply sorting
-    sort_column = getattr(Lead, sort_by, Lead.created_at)
-    if sort_order.lower() == "desc":
+    sort_column = getattr(Lead, sort_by_str, Lead.created_at)
+    if sort_order_str.lower() == "desc":
         stmt = stmt.order_by(desc(sort_column), desc(Lead.id))
     else:
         stmt = stmt.order_by(sort_column, desc(Lead.id))
+
 
     # Count total
     count_stmt = select(func.count()).select_from(stmt.subquery())
