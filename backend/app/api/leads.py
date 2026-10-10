@@ -311,8 +311,8 @@ async def restore_leads(
             city="Dubai",
             address=item.get("address"),
             website=item.get("website"),
-            rating=item.get("rating", 0.0),
-            reviews_count=item.get("reviewsCount", 0),
+            rating=float(item.get("rating") or item.get("totalScore") or 0.0),
+            reviews_count=int(item.get("reviews_count") or item.get("reviewsCount") or item.get("reviews") or 0),
             custom_data={}
         )
         db.add(lead)
