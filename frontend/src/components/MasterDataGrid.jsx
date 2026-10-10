@@ -446,9 +446,20 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                           {hasWeb && <Globe className="w-3.5 h-3.5 text-purple-400" title="Website available" />}
                         </div>
                         
-                        {lead.custom_data?.enrichment_status === 'in_progress' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse whitespace-nowrap">Enriching...</span>
-                        )}
+                        {lead.custom_data?.enrichment_status === 'in_progress' && (() => {
+                          const logs = lead.custom_data.ai_logs || [];
+                          const lastLog = logs[logs.length - 1] || '';
+                          let stepStr = 'Enriching...';
+                          if (lastLog.includes('visiting')) stepStr = 'Scraping site...';
+                          else if (lastLog.includes('analyzed')) stepStr = 'AI analyzing...';
+                          else if (lastLog.includes('Checking messengers')) stepStr = 'Checking msgs...';
+                          
+                          return (
+                            <span title={lastLog} className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse whitespace-nowrap">
+                              {stepStr}
+                            </span>
+                          );
+                        })()}
                         {lead.custom_data?.enrichment_status === 'completed' && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">AI Done</span>
                         )}
