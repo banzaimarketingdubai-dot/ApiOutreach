@@ -128,83 +128,101 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                 from app.services.messenger_checker import verify_messenger_availability
                 for item in site_batches:
                     lead_id = item["lead_id"]
-                    l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
-                    target_lead = l_res.scalars().first()
-                    if not target_lead: continue
-                    
-                    # Store AI custom data and mark completed
-                    existing_custom = dict(target_lead.custom_data) if target_lead.custom_data else {}
-                    if lead_id in extracted_results and extracted_results[lead_id]:
-                        existing_custom.update(extracted_results[lead_id])
-                        if "ai_logs" not in existing_custom:
-                            existing_custom["ai_logs"] = []
-                        existing_custom["ai_logs"].append(f"[SUCCESS] Analyzed {target_lead.website} and extracted custom variables.")
-                    else:
-                        if "ai_logs" not in existing_custom:
-                            existing_custom["ai_logs"] = []
-                        existing_custom["ai_logs"].append(f"[WARNING] API Rate limit or parse failure for this batch.")
+                    try:
+                        l_res = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
+                        target_lead = l_res.scalars().first()
+                        if not target_lead: continue
                         
-                    existing_custom["enrichment_status"] = "completed"
-                    
-                    # Auto-Check Messengers during enrichment
-                    phone_to_check = target_lead.phone
-                    if not phone_to_check:
-                        c_res = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_type == "phone"))
-                        first_phone = c_res.scalars().first()
-                        if first_phone:
-                            phone_to_check = first_phone.contact_value
-
-                    async def _check_msg(phone, custom_data_dict, lead_id):
-                        try:
-                            import asyncio
-                            info = await asyncio.to_thread(verify_messenger_availability, phone)
-                            custom_data_dict["telegram_available"] = info.get("telegram_available", False)
-                            custom_data_dict["whatsapp_available"] = info.get("whatsapp_available", False)
-                            custom_data_dict["viber_available"] = info.get("viber_available", False)
-                            if "ai_logs" not in custom_data_dict:
-                                custom_data_dict["ai_logs"] = []
-                            custom_data_dict["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone}")
+                        # Store AI custom data and mark completed
+                        existing_custom = dict(target_lead.custom_data) if target_lead.custom_data else {}
+                        if lead_id in extracted_results and extracted_results[lead_id]:
+                            existing_custom.update(extracted_results[lead_id])
+                            if "ai_logs" not in existing_custom:
+                                existing_custom["ai_logs"] = []
+                            existing_custom["ai_logs"].append(f"[SUCCESS] Analyzed {target_lead.website} and extracted custom variables.")
+                        else:
+                            if "ai_logs" not in existing_custom:
+                                existing_custom["ai_logs"] = []
+                            existing_custom["ai_logs"].append(f"[WARNING] API Rate limit or parse failure for this batch.")
                             
-                            # Add to Contact table so UI shows icons
-                            if custom_data_dict["whatsapp_available"]:
-                                existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "whatsapp"))
-                                if not existing.scalars().first():
-                                    db.add(Contact(lead_id=lead_id, contact_type="whatsapp", contact_value=info.get("clean_phone", phone)))
-                            if custom_data_dict["telegram_available"]:
-                                existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "telegram"))
-                                if not existing.scalars().first():
-                                    db.add(Contact(lead_id=lead_id, contact_type="telegram", contact_value=info.get("clean_phone", phone)))
-                        except Exception as e:
-                            logger.error(f"Messenger check failed for {phone}: {e}")
-
-                    if phone_to_check:
-                        await _check_msg(phone_to_check, existing_custom, target_lead.id)
-                            
-                    target_lead.custom_data = existing_custom
-                    from sqlalchemy.orm.attributes import flag_modified
-                    flag_modified(target_lead, "custom_data")
+                        existing_custom["enrichment_status"] = "completed"
                         
-                    # Extract Emails via Regex
-                    emails = set(re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', item["text"]))
-                    for email in emails:
-                        if len(email) < 50:
-                            existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == email))
-                            if not existing.scalars().first():
-                                db.add(Contact(lead_id=target_lead.id, contact_type="email", contact_value=email))
+                        # Auto-Check Messengers during enrichment
+                        phone_to_check = target_lead.phone
+                        if not phone_to_check:
+                            c_res = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_type == "phone"))
+                            first_phone = c_res.scalars().first()
+                            if first_phone:
+                                phone_to_check = first_phone.contact_value
+
+                        async def _check_msg(phone, custom_data_dict, lead_id):
+                            try:
+                                import asyncio
+                                info = await asyncio.to_thread(verify_messenger_availability, phone)
+                                custom_data_dict["telegram_available"] = info.get("telegram_available", False)
+                                custom_data_dict["whatsapp_available"] = info.get("whatsapp_available", False)
+                                custom_data_dict["viber_available"] = info.get("viber_available", False)
+                                if "ai_logs" not in custom_data_dict:
+                                    custom_data_dict["ai_logs"] = []
+                                custom_data_dict["ai_logs"].append(f"[SUCCESS] Auto-checked messengers for {phone}")
                                 
-                    # Extract wa.me links
-                    wa_links = set(re.findall(r'wa\.me/([0-9]+)', item["text"]))
-                    for wa in wa_links:
-                        existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == wa))
-                        if not existing.scalars().first():
-                            db.add(Contact(lead_id=target_lead.id, contact_type="whatsapp", contact_value=wa))
+                                # Add to Contact table so UI shows icons
+                                if custom_data_dict["whatsapp_available"]:
+                                    existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "whatsapp"))
+                                    if not existing.scalars().first():
+                                        db.add(Contact(lead_id=lead_id, contact_type="whatsapp", contact_value=info.get("clean_phone", phone)))
+                                if custom_data_dict["telegram_available"]:
+                                    existing = await db.execute(select(Contact).where(Contact.lead_id == lead_id, Contact.contact_type == "telegram"))
+                                    if not existing.scalars().first():
+                                        db.add(Contact(lead_id=lead_id, contact_type="telegram", contact_value=info.get("clean_phone", phone)))
+                            except Exception as e:
+                                logger.error(f"Messenger check failed for {phone}: {e}")
+
+                        if phone_to_check:
+                            await _check_msg(phone_to_check, existing_custom, target_lead.id)
+                                
+                        target_lead.custom_data = existing_custom
+                        from sqlalchemy.orm.attributes import flag_modified
+                        flag_modified(target_lead, "custom_data")
                             
-                    # Extract t.me links
-                    tg_links = set(re.findall(r't\.me/([a-zA-Z0-9_]+)', item["text"]))
-                    for tg in tg_links:
-                        existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == tg))
-                        if not existing.scalars().first():
-                            db.add(Contact(lead_id=target_lead.id, contact_type="telegram", contact_value=tg))
+                        # Extract Emails via Regex
+                        clean_text = item["text"].replace('\x00', '')
+                        emails = set(re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', clean_text))
+                        for email in emails:
+                            if len(email) < 50:
+                                existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == email))
+                                if not existing.scalars().first():
+                                    db.add(Contact(lead_id=target_lead.id, contact_type="email", contact_value=email))
+                                    
+                        # Extract wa.me links
+                        wa_links = set(re.findall(r'wa\.me/([0-9]+)', clean_text))
+                        for wa in wa_links:
+                            existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == wa))
+                            if not existing.scalars().first():
+                                db.add(Contact(lead_id=target_lead.id, contact_type="whatsapp", contact_value=wa))
+                                
+                        # Extract t.me links
+                        tg_links = set(re.findall(r't\.me/([a-zA-Z0-9_]+)', clean_text))
+                        for tg in tg_links:
+                            existing = await db.execute(select(Contact).where(Contact.lead_id == target_lead.id, Contact.contact_value == tg))
+                            if not existing.scalars().first():
+                                db.add(Contact(lead_id=target_lead.id, contact_type="telegram", contact_value=tg))
+                    except Exception as e:
+                        logger.error(f"Fatal error processing lead {lead_id}: {e}")
+                        try:
+                            # Try to mark it as failed so it doesn't stay in_progress
+                            l_res_err = await db.execute(select(Lead).where(cast(Lead.id, String) == lead_id))
+                            err_lead = l_res_err.scalars().first()
+                            if err_lead:
+                                err_custom = dict(err_lead.custom_data) if err_lead.custom_data else {}
+                                err_custom["enrichment_status"] = "failed"
+                                if "ai_logs" not in err_custom:
+                                    err_custom["ai_logs"] = []
+                                err_custom["ai_logs"].append(f"[ERROR] Internal server error during processing: {str(e)}")
+                                err_lead.custom_data = err_custom
+                                flag_modified(err_lead, "custom_data")
+                        except Exception:
+                            pass
                     
                 await db.commit()
                 # Cooldown to respect Gemini 15 RPM limits
