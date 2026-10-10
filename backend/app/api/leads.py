@@ -192,53 +192,50 @@ async def list_leads(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    from sqlalchemy.orm import selectinload
-    stmt = select(Lead).options(
-        selectinload(Lead.contacts),
-        selectinload(Lead.email_sequences)
-    )
-    filters_dict = {
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        # 1. Count total
+        count_stmt = select(func.count(Lead.id))
+        count_stmt = apply_lead_filters(count_stmt, filters_dict)
+        total_res = await db.execute(count_stmt)
+        total_count = total_res.scalar_one()
 
-        "niche": niche, "city": city, "has_website": has_website,
-        "min_score": min_score, "min_rating": min_rating, "max_rating": max_rating,
-        "search": search, "campaign_id": campaign_id,
-        "has_whatsapp": has_whatsapp, "has_telegram": has_telegram, "has_viber": has_viber,
-        "has_email": has_email, "has_phone": has_phone,
-        "enrichment_status": enrichment_status
-    }
-    stmt = apply_lead_filters(stmt, filters_dict)
+        # 2. Main query with selectinload & sorting
+        stmt = select(Lead).options(
+            selectinload(Lead.contacts),
+            selectinload(Lead.email_sequences)
+        )
+        stmt = apply_lead_filters(stmt, filters_dict)
 
-    sort_by_str = sort_by if isinstance(sort_by, str) else "created_at"
-    sort_order_str = sort_order if isinstance(sort_order, str) else "desc"
+        sort_by_str = sort_by if isinstance(sort_by, str) else "created_at"
+        sort_order_str = sort_order if isinstance(sort_order, str) else "desc"
+        sort_column = getattr(Lead, sort_by_str, Lead.created_at)
 
-    # Apply sorting
-    sort_column = getattr(Lead, sort_by_str, Lead.created_at)
-    if sort_order_str.lower() == "desc":
-        stmt = stmt.order_by(desc(sort_column), desc(Lead.id))
-    else:
-        stmt = stmt.order_by(sort_column, desc(Lead.id))
+        if sort_order_str.lower() == "desc":
+            stmt = stmt.order_by(desc(sort_column), desc(Lead.id))
+        else:
+            stmt = stmt.order_by(sort_column, desc(Lead.id))
 
+        offset = (page - 1) * page_size
+        stmt = stmt.offset(offset).limit(page_size)
+        res = await db.execute(stmt)
+        leads = res.scalars().all()
 
-    # Count total
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total_res = await db.execute(count_stmt)
-    total_count = total_res.scalar_one()
+        lead_responses = [LeadResponse.model_validate(l) for l in leads]
 
-    # Pagination
-    offset = (page - 1) * page_size
-    stmt = stmt.offset(offset).limit(page_size)
-    res = await db.execute(stmt)
-    leads = res.scalars().all()
+        return {
+            "items": lead_responses,
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size if page_size > 0 else 1
+        }
+    except Exception as err:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(err)}")
 
-    lead_responses = [LeadResponse.model_validate(l) for l in leads]
-
-    return {
-        "items": lead_responses,
-        "total": total_count,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": (total_count + page_size - 1) // page_size if page_size > 0 else 1
-    }
 
 @router.get("/{lead_id}", response_model=LeadResponse)
 async def get_lead(

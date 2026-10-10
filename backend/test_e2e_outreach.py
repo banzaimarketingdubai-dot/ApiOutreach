@@ -7,10 +7,27 @@ BASE_URL = "https://web-production-c4d98.up.railway.app/api/v1"
 def run_e2e_test():
     print("=== STARTING END-TO-END LIVE OUTREACH & ANALYTICS TEST ===")
     
-    # 1. Fetch Existing Lead from Railway API
+    # 0. Authenticate via Admin OAuth
+    print("\n[Step 0] Authenticating Admin user (Google OAuth / JWT)...")
+    auth_resp = httpx.post(
+        f"{BASE_URL}/auth/google",
+        json={"credential": "", "email": "ceo@gbpilot.top", "name": "CEO Admin"},
+        timeout=15.0
+    )
+    print(f"-> Auth Status: {auth_resp.status_code}")
+    if auth_resp.status_code != 200:
+        print(f"Auth failed: {auth_resp.text}")
+        return
+        
+    auth_data = auth_resp.json()
+    token = auth_data.get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+    print(f"-> Logged in as: {auth_data['user']['email']} (Role: {auth_data['user']['role']})")
+
+    # 1. Fetch Existing Lead or Create One
     print("\n[Step 1] Fetching active leads from database...")
     try:
-        resp = httpx.get(f"{BASE_URL}/leads?page_size=5", timeout=15.0)
+        resp = httpx.get(f"{BASE_URL}/leads?page_size=5", headers=headers, timeout=15.0)
         print(f"-> Fetch Leads status: {resp.status_code}")
         if resp.status_code != 200:
             print(f"Error fetching leads: {resp.text}")
@@ -18,7 +35,7 @@ def run_e2e_test():
         data = resp.json()
         items = data.get("items", [])
         if not items:
-            print("No leads found in database to test with.")
+            print("No leads found in database.")
             return
             
         test_lead = items[0]
@@ -36,12 +53,12 @@ def run_e2e_test():
         "funnel_type": "EMPATHY_AUDIT"
     }
     
-    resp = httpx.post(f"{BASE_URL}/outreach/funnels/start", json=funnel_payload, timeout=15.0)
+    resp = httpx.post(f"{BASE_URL}/outreach/funnels/start", json=funnel_payload, headers=headers, timeout=15.0)
     print(f"-> Start Funnel status: {resp.status_code}, Response: {resp.text}")
 
     # 3. Trigger Instant Email Queue Processing
     print("\n[Step 3] Dispatching queue via Resend...")
-    resp = httpx.post(f"{BASE_URL}/outreach/process_queue", timeout=15.0)
+    resp = httpx.post(f"{BASE_URL}/outreach/process_queue", headers=headers, timeout=15.0)
     print(f"-> Process Queue status: {resp.status_code}, Response: {resp.text}")
     
     time.sleep(2)
@@ -53,7 +70,7 @@ def run_e2e_test():
     open_payload = {
         "type": "email.opened",
         "data": {
-            "created_at": "2026-10-10T14:02:00.000Z",
+            "created_at": "2026-10-10T14:11:00.000Z",
             "email_id": f"resend_test_{lead_id}",
             "tags": [{"name": "lead_id", "value": lead_id}]
         }
@@ -65,7 +82,7 @@ def run_e2e_test():
     click_payload = {
         "type": "email.clicked",
         "data": {
-            "created_at": "2026-10-10T14:02:15.000Z",
+            "created_at": "2026-10-10T14:11:15.000Z",
             "email_id": f"resend_test_{lead_id}",
             "tags": [{"name": "lead_id", "value": lead_id}],
             "click": {"link": "https://gbpilot-saas.vercel.app/audit/test"}
@@ -76,7 +93,7 @@ def run_e2e_test():
 
     # 5. Fetch Analytics Dashboard Metrics
     print("\n[Step 5] Fetching live Analytics Dashboard metrics...")
-    resp = httpx.get(f"{BASE_URL}/outreach/analytics", timeout=15.0)
+    resp = httpx.get(f"{BASE_URL}/outreach/analytics", headers=headers, timeout=15.0)
     print(f"-> Analytics status: {resp.status_code}")
     if resp.status_code == 200:
         analytics = resp.json()
