@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Send, X, FileText, Loader2, AlertTriangle, Mail, MessageCircle, Navigation, Instagram, RefreshCw, CheckCircle2, ChevronRight, Sparkles, Target, Star } from 'lucide-react';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { apiCall } from '../services/api';
 
 export default function OmnichannelOutreachModal({ lead, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -43,12 +41,15 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       setLoading(true);
       // In a real scenario, the backend would generate different lengths based on channel.
       // We simulate or fetch the primary one and construct variations.
-      const response = await axios.post(`${API_URL}/api/v1/outreach/draft`, {
-        lead_id: lead.id,
-        prompt: promptContext
+      const response = await apiCall('/api/v1/outreach/draft', {
+        method: 'POST',
+        body: JSON.stringify({
+          lead_id: lead.id,
+          prompt: promptContext
+        })
       });
       
-      const emailDraft = response.data;
+      const emailDraft = response;
       
       // Simulate omnichannel variations based on prompt if backend doesn't provide them yet
       setDrafts({
@@ -87,11 +88,14 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       setSending(true);
       if (activeTab === 'email') {
         if (!recipientEmail) return toast.error("No recipient email found.");
-        await axios.post(`${API_URL}/api/v1/outreach/send`, {
-          lead_id: lead.id,
-          recipient_email: recipientEmail,
-          subject: drafts.email.subject,
-          body: drafts.email.body
+        await apiCall('/api/v1/outreach/send', {
+          method: 'POST',
+          body: JSON.stringify({
+            lead_id: lead.id,
+            recipient_email: recipientEmail,
+            subject: drafts.email.subject,
+            body: drafts.email.body
+          })
         });
         toast.success("Email sent successfully!");
       } else {
