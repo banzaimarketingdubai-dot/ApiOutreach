@@ -12,7 +12,7 @@ templates_data = [
         "touch_level": 1,
         "subject_template": "Quick question about {company_name}",
         "body_template": "<p>Hi team!</p><p>You have a great Revo Score, but you might be missing out on local traffic.</p>{audit_link}",
-        "ai_prompt_context": "The lead has a high Revo Score but is losing out on local search traffic. Write a friendly, warm Touch 1 email praising their quality but pointing out they are leaving money on the table. Include the {audit_link}."
+        "ai_prompt_context": "The lead has a high Revo Score but is losing out on local search traffic. Write a friendly, warm Touch 1 email praising their quality. CRITICAL: You must include {audit_link} and explicitly mention that this link contains a personalized online report with the first-priority steps they need to take right now to boost their GBP (Google Business Profile) ranking and get more local clients."
     },
     {
         "funnel_type": FunnelType.HIDDEN_GEMS,
@@ -49,7 +49,7 @@ templates_data = [
         "touch_level": 1,
         "subject_template": "Reputation issues for {company_name}",
         "body_template": "<p>Hi team!</p><p>We noticed your rating has dropped.</p>{audit_link}",
-        "ai_prompt_context": "The lead has a low rating and many negative reviews. Write a professional Touch 1 email offering help to salvage their reputation using AI review responses. Include {audit_link}."
+        "ai_prompt_context": "The lead has a low rating and many negative reviews. Write a professional Touch 1 email offering help to salvage their reputation. CRITICAL: Include {audit_link} and explain that this is a free, personalized online report showing the exact steps they need to take immediately to stop losing clients and start raising their GBP rating."
     },
     {
         "funnel_type": FunnelType.SINKING_GIANTS,
@@ -86,7 +86,7 @@ templates_data = [
         "touch_level": 1,
         "subject_template": "Is {company_name} still open?",
         "body_template": "<p>Hi team!</p><p>Your Google profile looks abandoned.</p>{audit_link}",
-        "ai_prompt_context": "The lead has almost zero reviews or profile activity. Touch 1 email: use the 'Are you still open?' angle because their Google Maps profile is so inactive. Include {audit_link}."
+        "ai_prompt_context": "The lead has almost zero reviews or profile activity. Touch 1 email: use the 'Are you still open?' angle because their Google Maps profile is so inactive. CRITICAL: Include {audit_link} and tell them this is their personalized audit report that outlines the 3 most urgent steps they must take to revive their GBP and start getting free inbound calls."
     },
     {
         "funnel_type": FunnelType.GHOSTS,
