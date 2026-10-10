@@ -467,6 +467,9 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         {lead.custom_data?.enrichment_status === 'failed' && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap">AI Failed</span>
                         )}
+                        {lead.custom_data?.enrichment_status === 'no_website' && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-500/20 text-slate-400 border border-slate-500/30 whitespace-nowrap">No WWW</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right">

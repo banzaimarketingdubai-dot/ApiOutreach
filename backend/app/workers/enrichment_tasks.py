@@ -132,7 +132,10 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
                         })
                     else:
                         existing_custom = dict(lead.custom_data) if lead.custom_data else {}
-                        existing_custom["enrichment_status"] = "failed"
+                        if "Empty URL" in err_msg:
+                            existing_custom["enrichment_status"] = "no_website"
+                        else:
+                            existing_custom["enrichment_status"] = "failed"
                         if "ai_logs" not in existing_custom:
                             existing_custom["ai_logs"] = []
                         existing_custom["ai_logs"].append(f"[ERROR] {err_msg}")

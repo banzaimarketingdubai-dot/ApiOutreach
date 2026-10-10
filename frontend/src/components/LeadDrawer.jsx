@@ -172,6 +172,9 @@ export default function LeadDrawer({ lead, onClose }) {
                     {lead.custom_data?.enrichment_status === 'failed' && (
                       <div className="text-red-400">[{new Date().toISOString()}] [ERROR] Website blocked access or returned empty HTML. AI analysis aborted.</div>
                     )}
+                    {lead.custom_data?.enrichment_status === 'no_website' && (
+                      <div className="text-slate-400">[{new Date().toISOString()}] [WARNING] No website provided. Skipped.</div>
+                    )}
                   </>
                 ) : (
                   <div className="text-red-400">[{new Date().toISOString()}] [ERROR] No website provided. Aborting AI enrichment.</div>
