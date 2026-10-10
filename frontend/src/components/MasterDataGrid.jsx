@@ -401,11 +401,11 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-white hover:text-blue-400 flex items-center space-x-2 w-max"
+                        className="text-white hover:text-blue-400 flex items-center space-x-1.5"
                         title="View on Google Maps"
                       >
-                        <span>{lead.company_name}</span>
-                        <MapPin className="w-3.5 h-3.5 text-blue-500/70" />
+                        <span className="truncate max-w-[150px] md:max-w-[250px] lg:max-w-[300px]" title={lead.company_name}>{lead.company_name}</span>
+                        <MapPin className="w-3.5 h-3.5 text-blue-500/70 flex-shrink-0" />
                       </a>
                     </td>
                     <td className="py-3.5 px-4 text-slate-300">
@@ -413,8 +413,8 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         {lead.business_type || 'N/A'}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400 truncate max-w-xs">
-                      {lead.city || ''} {lead.address ? `• ${lead.address}` : ''}
+                    <td className="py-3.5 px-4 text-slate-400 truncate max-w-[120px] md:max-w-[180px]" title={lead.city}>
+                      {lead.city || 'N/A'}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-1 text-amber-400">
