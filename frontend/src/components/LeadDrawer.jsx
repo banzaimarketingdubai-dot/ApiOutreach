@@ -176,7 +176,7 @@ export default function LeadDrawer({ lead, onClose }) {
                 ) : (
                   <div className="text-red-400">[{new Date().toISOString()}] [ERROR] No website provided. Aborting AI enrichment.</div>
                 )}
-                {lead.custom_data?.ai_logs && lead.custom_data.ai_logs.map((log, idx) => {
+                {lead.custom_data?.ai_logs && (Array.isArray(lead.custom_data.ai_logs) ? lead.custom_data.ai_logs : [lead.custom_data.ai_logs]).map((log, idx) => {
                   const isOld = lead.custom_data.enrichment_status === 'in_progress';
                   return (
                     <div key={idx} className={isOld ? "text-slate-500" : "text-fuchsia-400"}>

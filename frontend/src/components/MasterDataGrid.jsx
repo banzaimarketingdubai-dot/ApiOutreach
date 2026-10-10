@@ -447,8 +447,9 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         </div>
                         
                         {lead.custom_data?.enrichment_status === 'in_progress' && (() => {
-                          const logs = lead.custom_data.ai_logs || [];
-                          const lastLog = logs[logs.length - 1] || '';
+                          let logs = lead.custom_data.ai_logs || [];
+                          if (!Array.isArray(logs)) logs = [logs];
+                          const lastLog = typeof logs[logs.length - 1] === 'string' ? logs[logs.length - 1] : '';
                           let stepStr = 'Enriching...';
                           if (lastLog.includes('visiting')) stepStr = 'Scraping site...';
                           else if (lastLog.includes('analyzed')) stepStr = 'AI analyzing...';
