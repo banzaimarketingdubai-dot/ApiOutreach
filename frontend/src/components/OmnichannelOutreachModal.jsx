@@ -51,12 +51,11 @@ export default function OmnichannelOutreachModal({ lead, onClose }) {
       
       const emailDraft = response;
       
-      // Simulate omnichannel variations based on prompt if backend doesn't provide them yet
       setDrafts({
         email: emailDraft,
-        whatsapp: { body: `Hi team at ${lead.company_name} 👋\n\nI noticed you're based in ${lead.city || 'your area'}. We help companies in your niche scale efficiently. I've prepared a quick audit for you: ${emailDraft.audit_link || 'Link'}\n\nOpen to a quick chat?` },
-        telegram: { body: `Hi ${lead.company_name}! 🚀 We have a solution that might perfectly fit your operations in ${lead.city || 'your city'}. Check this out: ${emailDraft.audit_link || 'Link'}` },
-        direct: { body: `Hey! Love what you guys are doing at ${lead.company_name}. I made a quick audit of your setup: ${emailDraft.audit_link || 'Link'} - let me know what you think!` }
+        whatsapp: { body: emailDraft.whatsapp || `Hi team at ${lead.company_name} 👋\n\nI noticed you're based in ${lead.city || 'your area'}. We help companies in your niche scale efficiently. I've prepared a quick audit for you: ${emailDraft.audit_link || 'Link'}\n\nOpen to a quick chat?` },
+        telegram: { body: emailDraft.telegram || `Hi ${lead.company_name}! 🚀 We have a solution that might perfectly fit your operations in ${lead.city || 'your city'}. Check this out: ${emailDraft.audit_link || 'Link'}` },
+        direct: { body: emailDraft.direct || `Hey! Love what you guys are doing at ${lead.company_name}. I made a quick audit of your setup: ${emailDraft.audit_link || 'Link'} - let me know what you think!` }
       });
       
       if (forceRegenerate) toast.success("Draft regenerated via AI successfully");
