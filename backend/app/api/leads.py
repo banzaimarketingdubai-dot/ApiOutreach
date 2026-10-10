@@ -373,6 +373,8 @@ async def trigger_targeted_enrichment(
     if select_all:
         filters = body.get("filters", {})
         stmt = apply_lead_filters(select(Lead.id), filters)
+        # Apply the same default sorting as the UI
+        stmt = stmt.order_by(Lead.created_at.desc())
         res = await db.execute(stmt)
         lead_ids = [str(i) for i in res.scalars().all()]
         

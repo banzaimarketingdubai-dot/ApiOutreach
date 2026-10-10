@@ -84,6 +84,10 @@ def run_targeted_enrichment(self, lead_ids: List[str], custom_vars: List[dict] =
             leads = leads_res.scalars().all()
             if not leads:
                 return
+                
+            # Sort leads to match the exact order requested by the UI (so top visible leads are processed first)
+            lead_order = {lid: idx for idx, lid in enumerate(lead_ids)}
+            leads = sorted(leads, key=lambda l: lead_order.get(str(l.id), 999999))
 
             # Process in batches of 25 to fully utilize Gemini's 1M token context window and reduce API RPM usage
             batch_size = 25
