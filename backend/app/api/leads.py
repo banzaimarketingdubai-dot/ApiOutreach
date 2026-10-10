@@ -195,6 +195,15 @@ async def list_leads(
     try:
         from sqlalchemy.orm import selectinload
         
+        filters_dict = {
+            "niche": niche, "city": city, "has_website": has_website,
+            "min_score": min_score, "min_rating": min_rating, "max_rating": max_rating,
+            "search": search, "campaign_id": campaign_id,
+            "has_whatsapp": has_whatsapp, "has_telegram": has_telegram, "has_viber": has_viber,
+            "has_email": has_email, "has_phone": has_phone,
+            "enrichment_status": enrichment_status
+        }
+
         # 1. Count total
         count_stmt = select(func.count(Lead.id))
         count_stmt = apply_lead_filters(count_stmt, filters_dict)
@@ -207,6 +216,7 @@ async def list_leads(
             selectinload(Lead.email_sequences)
         )
         stmt = apply_lead_filters(stmt, filters_dict)
+
 
         sort_by_str = sort_by if isinstance(sort_by, str) else "created_at"
         sort_order_str = sort_order if isinstance(sort_order, str) else "desc"
