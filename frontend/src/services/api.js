@@ -15,7 +15,7 @@ export async function apiCall(endpoint, options = {}) {
 }
 
 export async function fetchLeads(params = {}) {
-  const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== ''));
+  const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined && v !== 'null'));
   const query = new URLSearchParams(cleanParams).toString();
   const res = await fetch(`${API_BASE}/leads?${query}`);
   if (!res.ok) throw new Error('Failed to fetch leads');
@@ -180,7 +180,8 @@ export async function fetchApifyBalance() {
 }
 
 export function getExportCsvUrl(filters = {}) {
-  const query = new URLSearchParams(filters).toString();
+  const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== '' && v !== null && v !== undefined && v !== 'null'));
+  const query = new URLSearchParams(cleanFilters).toString();
   return `${API_BASE}/export/csv?${query}`;
 }
 
