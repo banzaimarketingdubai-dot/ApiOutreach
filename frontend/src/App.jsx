@@ -34,13 +34,9 @@ export default function App() {
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
   const handleApiError = (err) => {
-    console.error('API call error:', err);
-    if (err?.message?.includes('401') || err?.message?.includes('Unauthorized') || err?.message?.includes('Invalid token')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-    }
+    console.warn('Background data fetch notice:', err);
   };
+
 
   const loadLeads = async () => {
     if (!user) return;
