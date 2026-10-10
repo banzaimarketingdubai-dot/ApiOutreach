@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 from app.db.session import Base
 
 class UserRole(str, enum.Enum):
+    SUPER_ADMIN = "SUPER_ADMIN"
     ADMIN = "ADMIN"
     OPERATOR = "OPERATOR"
     API_CLIENT = "API_CLIENT"

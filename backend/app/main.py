@@ -15,6 +15,7 @@ from app.api.apify import router as apify_router
 from app.api.settings import router as settings_router
 from app.api.templates import router as templates_router
 from app.api.outreach import router as outreach_router
+from app.api.users import router as users_router
 
 # Import models so Base.metadata is fully populated for create_all
 import app.models.user
@@ -73,6 +74,16 @@ async def lifespan(app: FastAPI):
                 await conn.execute(text("ALTER TYPE funneltype ADD VALUE IF NOT EXISTS 'EMPATHY_AUDIT';"))
             except Exception:
                 pass
+            try:
+                await conn.execute(text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'SUPER_ADMIN';"))
+            except Exception:
+                pass
+            
+            # Upgrade specific emails to SUPER_ADMIN
+            try:
+                await conn.execute(text("UPDATE users SET role = 'SUPER_ADMIN' WHERE email IN ('ceo@gbpilot.top', '0451611@gmail.com');"))
+            except Exception as e:
+                logger.warning(f"Failed to upgrade superadmins: {e}")
             
         logger.info("Database tables initialized successfully.")
 
@@ -107,6 +118,7 @@ app.include_router(apify_router, prefix=f"{settings.API_V1_STR}/apify", tags=["A
 app.include_router(settings_router, prefix=f"{settings.API_V1_STR}/settings", tags=["Settings"])
 app.include_router(templates_router, prefix=f"{settings.API_V1_STR}/templates", tags=["Templates"])
 app.include_router(outreach_router, prefix=f"{settings.API_V1_STR}/outreach", tags=["Outreach"])
+app.include_router(users_router, prefix=f"{settings.API_V1_STR}/users", tags=["Users"])
 
 @app.get("/")
 async def root():

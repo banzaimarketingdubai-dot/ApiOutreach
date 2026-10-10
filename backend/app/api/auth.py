@@ -81,11 +81,12 @@ async def login_google(body: GoogleAuthRequest, db: AsyncSession = Depends(get_d
         user = res.scalars().first()
 
         if not user:
+            role_to_assign = UserRole.SUPER_ADMIN if email_clean in ['ceo@gbpilot.top', '0451611@gmail.com'] else UserRole.ADMIN
             user = User(
                 email=email_clean,
                 hashed_password=get_password_hash("google_oauth_auth"),
                 full_name=full_name,
-                role=UserRole.ADMIN
+                role=role_to_assign
             )
             db.add(user)
             await db.commit()
