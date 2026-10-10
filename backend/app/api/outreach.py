@@ -162,10 +162,11 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
         raise HTTPException(status_code=404, detail="Lead not found")
         
     from app.services.vault_helper import get_api_key
-    gemini_key = await get_api_key("gemini")
+    # Switch to Groq because Gemini free tier is heavily restricted for this account
+    groq_key = await get_api_key("groq")
     
-    if not gemini_key:
-        raise HTTPException(status_code=400, detail="Gemini API key not configured in Vault or .env")
+    if not groq_key:
+        raise HTTPException(status_code=400, detail="Groq API key not configured in Vault or .env")
         
     audit_link = f"https://gbpilot-saas.vercel.app/audit/{lead.id}"
     snapshot_img_url = f"https://placehold.co/600x400/ef4444/white/png?text=Geo-Grid+Heatmap+Snapshot"
@@ -187,42 +188,33 @@ async def generate_single_draft(req: OmniDraftRequest, db: AsyncSession = Depend
     
     user_instruction = req.prompt or f"Напиши холодное письмо для {lead.company_name} с предложением нашего сервиса."
     
+    system_instruction += '\n\nYou MUST return a valid JSON object matching this schema exactly:\n{"subject": "str", "email_body": "str", "whatsapp": "str", "telegram": "str", "direct": "str"}'
+    
     payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": system_instruction + "\n\nUser Instruction:\n" + user_instruction}]}
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_instruction}
         ],
-        "generationConfig": {
-            "temperature": 0.7,
-            "response_mime_type": "application/json",
-            "response_schema": {
-                "type": "object",
-                "properties": {
-                    "subject": {"type": "string"},
-                    "email_body": {"type": "string"},
-                    "whatsapp": {"type": "string"},
-                    "telegram": {"type": "string"},
-                    "direct": {"type": "string"}
-                },
-                "required": ["subject", "email_body", "whatsapp", "telegram", "direct"]
-            }
-        }
+        "response_format": {"type": "json_object"},
+        "temperature": 0.7
     }
     
     import httpx
-    # Using gemini-2.5-flash as the fast/reliable model with higher free-tier limits
-    api_model = "gemini-2.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{api_model}:generateContent?key={gemini_key}"
+    url = "https://api.groq.com/openai/v1/chat/completions"
     
     try:
-        from app.services.rate_limiter import wait_for_gemini_capacity
-        await wait_for_gemini_capacity()
-        
         async with httpx.AsyncClient(timeout=90.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(
+                url, 
+                json=payload, 
+                headers={"Authorization": f"Bearer {groq_key}"}
+            )
+            
             if resp.status_code != 200:
-                raise HTTPException(status_code=500, detail=f"Gemini API error: {resp.text}")
+                raise HTTPException(status_code=500, detail=f"Groq API error: {resp.text}")
                 
-            raw_json = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            raw_json = resp.json()["choices"][0]["message"]["content"]
             import json
             data = json.loads(raw_json)
             
