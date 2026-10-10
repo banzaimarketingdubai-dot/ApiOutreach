@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon } from 'lucide-react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon } from 'lucide-react';
 import { getExportCsvUrl, checkMessengers, exportLeadRadar } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
@@ -395,19 +395,18 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                         className="rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
                       />
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-white group-hover:text-blue-400">
-                      {lead.company_name}
-                      {hasWeb && (
-                        <a
-                          href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-block ml-2 text-slate-500 hover:text-blue-400"
-                        >
-                          <ExternalLink className="w-3 h-3 inline" />
-                        </a>
-                      )}
+                    <td className="py-3.5 px-4 font-bold group-hover:text-blue-400">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.company_name + ' ' + (lead.city || ''))}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-white hover:text-blue-400 flex items-center space-x-2 w-max"
+                        title="View on Google Maps"
+                      >
+                        <span>{lead.company_name}</span>
+                        <MapPin className="w-3.5 h-3.5 text-blue-500/70" />
+                      </a>
                     </td>
                     <td className="py-3.5 px-4 text-slate-300">
                       <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[11px]">
