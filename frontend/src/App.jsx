@@ -10,6 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import OutreachBuilder from './components/OutreachBuilder';
 import PromoTrack from './components/PromoTrack';
 import AdminLoginModal from './components/AdminLoginModal';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {

@@ -12,20 +12,29 @@ export default function AdminLoginModal({ onLoginSuccess }) {
   // Initialize Google Identity Services if client ID is set or available
   useEffect(() => {
     /* global google */
-    if (window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1029384756-sample.apps.googleusercontent.com',
-          callback: handleGoogleResponse
-        });
-        window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInBtn'),
-          { theme: 'filled_blue', size: 'large', width: '100%', text: 'continue_with' }
-        );
-      } catch (err) {
-        console.warn('Google GSI initialization notice:', err);
+    let intervalId;
+    const initGoogle = () => {
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1029384756-sample.apps.googleusercontent.com',
+            callback: handleGoogleResponse
+          });
+          window.google.accounts.id.renderButton(
+            document.getElementById('googleSignInBtn'),
+            { theme: 'filled_blue', size: 'large', width: '100%', text: 'continue_with' }
+          );
+          clearInterval(intervalId);
+        } catch (err) {
+          console.warn('Google GSI initialization notice:', err);
+        }
       }
-    }
+    };
+    
+    initGoogle();
+    intervalId = setInterval(initGoogle, 500);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleGoogleResponse = async (response) => {
