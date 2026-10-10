@@ -10,7 +10,14 @@ export async function apiCall(endpoint, options = {}) {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options
   });
-  if (!res.ok) throw new Error(`API call failed: ${res.statusText}`);
+  if (!res.ok) {
+    let errorDetail = res.statusText;
+    try {
+      const errData = await res.json();
+      errorDetail = errData.detail || errorDetail;
+    } catch (e) {}
+    throw new Error(`API call failed: ${errorDetail}`);
+  }
   return res.json();
 }
 
