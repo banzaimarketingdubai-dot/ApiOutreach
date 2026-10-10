@@ -255,6 +255,9 @@ async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_
         leads = leads_res.scalars().all()
         
         count = 0
+        camp_res = await db.execute(select(OutreachCampaign.id))
+        default_campaign_id = camp_res.scalars().first()
+
         for lead in leads:
             # Stop existing sequence
             await db.execute(update(EmailSequence).where(EmailSequence.lead_id == lead.id).values(status=EmailSequenceStatus.PAUSED))
@@ -262,6 +265,7 @@ async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_
             # Create new active sequence
             new_seq = EmailSequence(
                 lead_id=lead.id,
+                campaign_id=lead.campaign_id or default_campaign_id,
                 funnel_type=req.funnel_type,
                 status=EmailSequenceStatus.ACTIVE,
                 current_touch=1,
@@ -269,6 +273,7 @@ async def start_funnel(req: FunnelActionRequest, db: AsyncSession = Depends(get_
             )
             db.add(new_seq)
             count += 1
+
             
         await db.commit()
         return {"status": "success", "started": count}

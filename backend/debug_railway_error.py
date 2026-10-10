@@ -7,9 +7,13 @@ def debug():
     token = auth_resp.json().get("access_token")
     headers = {"Authorization": f"Bearer {token}"}
     
-    resp = httpx.get(f"{BASE_URL}/leads?page_size=5", headers=headers)
-    print("Status:", resp.status_code)
-    print("Body:", resp.text)
+    resp = httpx.post(
+        f"{BASE_URL}/outreach/funnels/start",
+        json={"lead_ids": ["ebcc0d7e-ca07-4f5d-b21d-a415fc7a5f2e"], "funnel_type": "EMPATHY_AUDIT"},
+        headers=headers
+    )
+    print("Funnel Start Status:", resp.status_code)
+    print("Funnel Start Response:", resp.text)
 
 if __name__ == "__main__":
     debug()

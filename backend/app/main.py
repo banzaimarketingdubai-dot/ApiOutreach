@@ -46,7 +46,9 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_subject VARCHAR(255);",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS email_content TEXT;",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP WITH TIME ZONE;",
-                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;"
+                "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;",
+                "ALTER TABLE email_sequences ALTER COLUMN campaign_id DROP NOT NULL;"
+
             ]
             
             for stmt_text in statements:
