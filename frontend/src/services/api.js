@@ -1,7 +1,18 @@
 const IS_PROD = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+const API_ROOT = IS_PROD ? 'https://web-production-c4d98.up.railway.app' : '';
 const API_BASE = IS_PROD
   ? 'https://web-production-c4d98.up.railway.app/api/v1'
   : '/api/v1';
+
+export async function apiCall(endpoint, options = {}) {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_ROOT}${endpoint}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options
+  });
+  if (!res.ok) throw new Error(`API call failed: ${res.statusText}`);
+  return res.json();
+}
 
 export async function fetchLeads(params = {}) {
   const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== ''));
