@@ -90,9 +90,12 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
         "enrichment_failed": enrich_fail_val
     }
 
-def apply_lead_filters(stmt, filters_dict: dict):
+def apply_lead_filters(stmt, filters_dict: dict = None):
+    if not filters_dict:
+        return stmt
     from sqlalchemy import and_, or_
     filters = []
+
     
     niche = filters_dict.get("niche")
     city = filters_dict.get("city")
