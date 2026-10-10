@@ -9,7 +9,10 @@ import resend
 from app.api.deps import get_db
 from app.models.lead import Lead
 from app.models.outreach_campaign import OutreachCampaign, OutreachStatus
-from app.models.email_sequence import EmailSequence, EmailSequenceStatus, PromoTrackStatus
+from app.models.email_sequence import EmailSequence, EmailSequenceStatus, PromoTrackStatus, OutreachTemplate
+from app.workers.outreach_tasks import generate_email_with_groq
+from app.services.vault_helper import get_api_key
+import asyncio
 
 router = APIRouter()
 
@@ -380,3 +383,58 @@ async def resend_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
     await db.commit()
     return {"status": "success"}
+
+# =======================
+# Sandbox / Testing
+# =======================
+class SandboxRequest(BaseModel):
+    lead_id: str
+    funnel_type: str
+
+@router.post("/sandbox/generate")
+async def generate_sandbox_funnel(req: SandboxRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Instantly generates all 5 touches for a given funnel type and lead.
+    Useful for testing prompts without waiting for the scheduler.
+    """
+    # 1. Fetch Lead
+    lead_res = await db.execute(select(Lead).where(Lead.id == req.lead_id))
+    lead = lead_res.scalar_one_or_none()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+        
+    # 2. Fetch Templates
+    templates_res = await db.execute(
+        select(OutreachTemplate)
+        .where(OutreachTemplate.funnel_type == req.funnel_type)
+        .order_by(OutreachTemplate.touch_level)
+    )
+    templates = templates_res.scalars().all()
+    if not templates:
+        raise HTTPException(status_code=404, detail="No templates found for this funnel")
+        
+    groq_key = await get_api_key("groq")
+    if not groq_key:
+        raise HTTPException(status_code=400, detail="Groq API Key not found in Vault")
+
+    audit_link = f"https://gbpilot-saas.vercel.app/audit/{lead.id}"
+    
+    # 3. Generate all 5 concurrently
+    async def process_touch(template):
+        generated = await generate_email_with_groq(groq_key, lead, template)
+        body = generated.get("body", template.body_template)
+        if body:
+            body = body.replace("{audit_link}", audit_link)
+        return {
+            "touch_level": template.touch_level,
+            "subject": generated.get("subject", template.subject_template),
+            "body": body
+        }
+        
+    tasks = [process_touch(t) for t in templates]
+    results = await asyncio.gather(*tasks)
+    
+    # Sort by touch level
+    results.sort(key=lambda x: x["touch_level"])
+    
+    return {"status": "success", "touches": results}

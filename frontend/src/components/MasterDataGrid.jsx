@@ -5,6 +5,8 @@ import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
 import OmnichannelOutreachModal from './OmnichannelOutreachModal';
 import FunnelSetupModal from './FunnelSetupModal';
+import CreateLeadModal from './CreateLeadModal';
+import SandboxModal from './SandboxModal';
 
 export default function MasterDataGrid({ leads = [], onSelectLead, filters, setFilters, onRefresh, pagination = { total: 0, total_pages: 1, page: 1 } }) {
   const [selectedLeads, setSelectedLeads] = useState([]);
@@ -12,6 +14,8 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
   const [dryRunModalOpen, setDryRunModalOpen] = useState(false);
   const [crmModalOpen, setCrmModalOpen] = useState(false);
   const [funnelModalOpen, setFunnelModalOpen] = useState(false);
+  const [createLeadModalOpen, setCreateLeadModalOpen] = useState(false);
+  const [sandboxLead, setSandboxLead] = useState(null);
   const [outreachLead, setOutreachLead] = useState(null);
   const [isCheckingMessengers, setIsCheckingMessengers] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -325,10 +329,18 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all"
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all shrink-0"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
+          </button>
+          
+          <button
+            onClick={() => setCreateLeadModalOpen(true)}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-500/30 text-purple-400 text-xs font-semibold border border-purple-500/50 transition-all shrink-0 ml-2"
+          >
+            <Star className="w-3.5 h-3.5" />
+            <span>Add Test Lead</span>
           </button>
         </div>
       </div>
@@ -565,7 +577,14 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
                           <Send className="w-3.5 h-3.5" />
                           <span className="text-[10px] font-bold">Draft Email</span>
                         </button>
-                        <span className="text-slate-400 text-[11px] group-hover:text-white">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSandboxLead(lead); }}
+                          className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/30 rounded-lg transition-colors group-hover:border-purple-500/60"
+                        >
+                          <Beaker className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold">Sandbox</span>
+                        </button>
+                        <span className="text-slate-400 text-[11px] group-hover:text-white mt-1">
                           Inspect →
                         </span>
                       </div>
@@ -661,6 +680,24 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
         />
       )}
 
+      {createLeadModalOpen && (
+        <CreateLeadModal
+          isOpen={createLeadModalOpen}
+          onClose={() => setCreateLeadModalOpen(false)}
+          onSuccess={() => {
+            setCreateLeadModalOpen(false);
+            if (onRefresh) onRefresh();
+          }}
+        />
+      )}
+
+      {sandboxLead && (
+        <SandboxModal
+          isOpen={!!sandboxLead}
+          onClose={() => setSandboxLead(null)}
+          lead={sandboxLead}
+        />
+      )}
     </div>
   );
 }

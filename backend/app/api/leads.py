@@ -227,6 +227,27 @@ async def get_lead(
         raise HTTPException(status_code=404, detail="Lead not found")
     return lead
 
+@router.post("", response_model=LeadResponse)
+async def create_lead(
+    body: LeadCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Create lead
+    lead_data = body.model_dump(exclude={"contacts"})
+    lead = Lead(**lead_data)
+    db.add(lead)
+    await db.flush()
+    
+    # Create contacts
+    for contact_data in body.contacts:
+        contact = Contact(lead_id=lead.id, **contact_data.model_dump())
+        db.add(contact)
+        
+    await db.commit()
+    await db.refresh(lead)
+    return lead
+
 @router.patch("/{lead_id}", response_model=LeadResponse)
 async def update_lead(
     lead_id: UUID,

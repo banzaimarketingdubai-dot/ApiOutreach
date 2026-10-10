@@ -29,6 +29,13 @@ export async function fetchLeads(params = {}) {
   return res.json();
 }
 
+export async function createLead(leadData) {
+  return apiCall(`${API_BASE}/leads`, {
+    method: 'POST',
+    body: JSON.stringify(leadData)
+  });
+}
+
 export async function checkMessengers(payload) {
   const res = await fetch(`${API_BASE}/leads/check_messengers`, {
     method: 'POST',
@@ -258,5 +265,12 @@ export async function overrideFunnel(lead_id, email_subject, email_content) {
   return apiCall(`${API_BASE}/outreach/funnels/override`, {
     method: 'POST',
     body: JSON.stringify({ lead_id, email_subject, email_content })
+  });
+}
+
+export async function generateSandboxFunnel(lead_id, funnel_type) {
+  return apiCall(`${API_BASE}/outreach/sandbox/generate`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_id, funnel_type })
   });
 }
