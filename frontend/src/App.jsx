@@ -33,7 +33,17 @@ export default function App() {
   const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, has_whatsapp: '', has_telegram: '', has_viber: '', has_email: '', has_phone: '' });
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
+  const handleApiError = (err) => {
+    console.error('API call error:', err);
+    if (err?.message?.includes('401') || err?.message?.includes('Unauthorized') || err?.message?.includes('Invalid token')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    }
+  };
+
   const loadLeads = async () => {
+    if (!user) return;
     try {
       const fetchFilters = { ...filters };
       if (globalCampaignId) fetchFilters.campaign_id = globalCampaignId;
@@ -41,27 +51,30 @@ export default function App() {
       setLeads(data.items || []);
       setPagination({ total: data.total || 0, total_pages: data.total_pages || 1 });
     } catch (err) {
-      console.error('Error fetching leads:', err);
+      handleApiError(err);
     }
   };
 
   const loadCampaigns = async () => {
+    if (!user) return;
     try {
       const data = await fetchCampaigns();
       setCampaigns(data || []);
     } catch (err) {
-      console.error('Error fetching campaigns:', err);
+      handleApiError(err);
     }
   };
 
   const loadStats = async () => {
+    if (!user) return;
     try {
       const data = await fetchStats();
       setStats(data || { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
     } catch (err) {
-      console.error('Error fetching stats:', err);
+      handleApiError(err);
     }
   };
+
 
   useEffect(() => {
     loadLeads();

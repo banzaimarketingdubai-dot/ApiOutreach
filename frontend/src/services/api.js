@@ -53,9 +53,7 @@ export async function fetchCurrentUser() {
 export async function fetchLeads(params = {}) {
   const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined && v !== 'null'));
   const query = new URLSearchParams(cleanParams).toString();
-  const res = await fetch(`${API_BASE}/leads?${query}`);
-  if (!res.ok) throw new Error('Failed to fetch leads');
-  return res.json();
+  return apiCall(`${API_BASE}/leads?${query}`);
 }
 
 export async function createLead(leadData) {
@@ -66,161 +64,110 @@ export async function createLead(leadData) {
 }
 
 export async function checkMessengers(payload) {
-  const res = await fetch(`${API_BASE}/leads/check_messengers`, {
+  return apiCall(`${API_BASE}/leads/check_messengers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Failed to check messengers');
-  return res.json();
 }
 
 export async function exportLeadRadar(payload) {
-  const res = await fetch(`${API_BASE}/leads/export_lead_radar`, {
+  return apiCall(`${API_BASE}/leads/export_lead_radar`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Failed to export to Lead Radar');
-  return res.json();
 }
 
 export async function fetchStats() {
-  const res = await fetch(`${API_BASE}/leads/stats`);
-  if (!res.ok) throw new Error('Failed to fetch stats');
-  return res.json();
+  return apiCall(`${API_BASE}/leads/stats`);
 }
 
 export async function generateAIStrategy(user_goal, geo, additional_notes) {
-  const res = await fetch(`${API_BASE}/ai/strategy`, {
+  return apiCall(`${API_BASE}/ai/strategy`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_goal, geo, additional_notes })
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'AI Strategy generation failed');
-  }
-  return res.json();
 }
 
+
 export async function createCampaign(campaignData) {
-  const res = await fetch(`${API_BASE}/campaigns`, {
+  return apiCall(`${API_BASE}/campaigns`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(campaignData)
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to launch campaign');
-  }
-  return res.json();
 }
 
 export async function fetchCampaigns() {
-  const res = await fetch(`${API_BASE}/campaigns`);
-  if (!res.ok) throw new Error('Failed to fetch campaigns');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns`);
 }
 
 export async function getCampaignStatus(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/status`);
-  if (!res.ok) throw new Error('Failed to fetch campaign status');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}/status`);
 }
 
 export async function updateCampaign(id, data) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+  return apiCall(`${API_BASE}/campaigns/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  if (!res.ok) throw new Error('Failed to update campaign');
-  return res.json();
 }
 
 export async function deleteCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete campaign');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}`, { method: 'DELETE' });
 }
 
 export async function retryFailed(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/retry-failed`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to retry');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}/retry-failed`, { method: 'POST' });
 }
 
 export async function recalculateScore(id, scoring_rules) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/recalculate-score`, {
+  return apiCall(`${API_BASE}/campaigns/${id}/recalculate-score`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scoring_rules })
   });
-  if (!res.ok) throw new Error('Failed to recalculate score');
-  return res.json();
 }
 
 export async function getSuspectedDuplicates(campaign_id = '') {
   const query = campaign_id ? `?campaign_id=${campaign_id}` : '';
-  const res = await fetch(`${API_BASE}/leads/tools/duplicates${query}`);
-  if (!res.ok) throw new Error('Failed to fetch duplicates');
-  return res.json();
+  return apiCall(`${API_BASE}/leads/tools/duplicates${query}`);
 }
 
 export async function mergeLeads(sourceId, targetId) {
-  const res = await fetch(`${API_BASE}/leads/${sourceId}/merge`, {
+  return apiCall(`${API_BASE}/leads/${sourceId}/merge`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ target_lead_id: targetId })
   });
-  if (!res.ok) throw new Error('Failed to merge leads');
-  return res.json();
 }
 
 export async function dryRunAI(prompt_template, lead_ids) {
-  const res = await fetch(`${API_BASE}/ai/dry-run`, {
+  return apiCall(`${API_BASE}/ai/dry-run`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt_template, lead_ids })
   });
-  if (!res.ok) throw new Error('Failed to run AI dry run');
-  return res.json();
 }
 
 export async function resetEnrichment(lead_ids) {
-  const res = await fetch(`${API_BASE}/leads/tools/reset_enrichment`, {
+  return apiCall(`${API_BASE}/leads/tools/reset_enrichment`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ lead_ids })
   });
-  if (!res.ok) throw new Error('Failed to reset enrichment');
-  return res.json();
 }
 
 export async function pauseCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/suspend`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to pause campaign');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}/suspend`, { method: 'POST' });
 }
 
 export async function resumeCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/resume`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to resume campaign');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}/resume`, { method: 'POST' });
 }
 
 export async function stopCampaign(id) {
-  const res = await fetch(`${API_BASE}/campaigns/${id}/halt`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to stop campaign');
-  return res.json();
+  return apiCall(`${API_BASE}/campaigns/${id}/halt`, { method: 'POST' });
 }
 
 export async function fetchApifyBalance() {
-  const res = await fetch(`${API_BASE}/apify/balance`);
-  if (!res.ok) throw new Error('Failed to fetch Apify balance');
-  return res.json();
+  return apiCall(`${API_BASE}/apify/balance`);
 }
+
 
 export function getExportCsvUrl(filters = {}) {
   const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== '' && v !== null && v !== undefined && v !== 'null'));
