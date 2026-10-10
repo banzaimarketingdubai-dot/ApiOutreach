@@ -456,59 +456,64 @@ async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = De
     """
     Returns aggregated conversion metrics for the dashboard.
     """
-    
-    # Simple Python-side aggregation for speed in this demo
-    query = select(EmailSequence)
-    if campaign_id:
-        query = query.where(EmailSequence.campaign_id == campaign_id)
+    try:
+        query = select(EmailSequence)
+        if campaign_id and isinstance(campaign_id, str) and campaign_id.strip() and not hasattr(campaign_id, 'default'):
+            query = query.where(EmailSequence.campaign_id == campaign_id)
+            
+        res = await db.execute(query)
+        sequences = res.scalars().all()
         
-    res = await db.execute(query)
-    sequences = res.scalars().all()
-    
-    overall = {"sent": 0, "opened": 0, "clicked": 0, "replied": 0}
-    funnels_map = {}
-    touches_map = {}
-    
-    for seq in sequences:
-        # Check overall flags based on status or timestamps
-        sent = seq.status in [EmailSequenceStatus.SENT, EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED, EmailSequenceStatus.BOUNCED]
-        opened = seq.opened_at is not None or seq.status in [EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
-        clicked = seq.clicked_at is not None
-        replied = seq.status in [EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
+        overall = {"sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+        funnels_map = {}
+        touches_map = {}
         
-        if sent: overall["sent"] += 1
-        if opened: overall["opened"] += 1
-        if clicked: overall["clicked"] += 1
-        if replied: overall["replied"] += 1
+        for seq in sequences:
+            # Check overall flags based on status or timestamps
+            sent = seq.status in [EmailSequenceStatus.SENT, EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED, EmailSequenceStatus.BOUNCED]
+            opened = getattr(seq, 'opened_at', None) is not None or seq.status in [EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
+            clicked = getattr(seq, 'clicked_at', None) is not None
+            replied = seq.status in [EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
+            
+            if sent: overall["sent"] += 1
+            if opened: overall["opened"] += 1
+            if clicked: overall["clicked"] += 1
+            if replied: overall["replied"] += 1
+            
+            # Group by Funnel Type
+            f_type = seq.funnel_type.value if hasattr(seq.funnel_type, "value") else str(seq.funnel_type or "CUSTOM")
+            if f_type not in funnels_map:
+                funnels_map[f_type] = {"name": f_type, "sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+            
+            if sent: funnels_map[f_type]["sent"] += 1
+            if opened: funnels_map[f_type]["opened"] += 1
+            if clicked: funnels_map[f_type]["clicked"] += 1
+            if replied: funnels_map[f_type]["replied"] += 1
+            
+            # Group by Touch Level
+            t_level = seq.current_touch or 1
+            if t_level not in touches_map:
+                touches_map[t_level] = {"touch_level": t_level, "opened": 0, "clicked": 0}
+            
+            if opened: touches_map[t_level]["opened"] += 1
+            if clicked: touches_map[t_level]["clicked"] += 1
+            
+        funnels_list = list(funnels_map.values())
+        touches_list = sorted(list(touches_map.values()), key=lambda x: x["touch_level"])
         
-        # Group by Funnel Type
-        f_type = seq.funnel_type.value if hasattr(seq.funnel_type, "value") else str(seq.funnel_type or "CUSTOM")
-        if f_type not in funnels_map:
-            funnels_map[f_type] = {"name": f_type, "sent": 0, "opened": 0, "clicked": 0, "replied": 0}
-        
-        if sent: funnels_map[f_type]["sent"] += 1
-        if opened: funnels_map[f_type]["opened"] += 1
-        if clicked: funnels_map[f_type]["clicked"] += 1
-        if replied: funnels_map[f_type]["replied"] += 1
-        
-        # Group by Touch Level
-        t_level = seq.current_touch or 1
-        if t_level not in touches_map:
-            touches_map[t_level] = {"touch_level": t_level, "opened": 0, "clicked": 0}
+        return {
+            "overall": overall,
+            "funnels": funnels_list,
+            "touches": touches_list
+        }
+    except Exception as err:
+        print(f"Error in get_analytics: {err}")
+        return {
+            "overall": {"sent": 0, "opened": 0, "clicked": 0, "replied": 0},
+            "funnels": [],
+            "touches": []
+        }
 
-        
-        if opened: touches_map[t_level]["opened"] += 1
-        if clicked: touches_map[t_level]["clicked"] += 1
-        
-    # Format arrays for Recharts
-    funnels_list = list(funnels_map.values())
-    touches_list = sorted(list(touches_map.values()), key=lambda x: x["touch_level"])
-    
-    return {
-        "overall": overall,
-        "funnels": funnels_list,
-        "touches": touches_list
-    }
 
 @router.post("/process_queue")
 async def trigger_process_queue():
