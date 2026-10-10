@@ -508,3 +508,13 @@ async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = De
         "funnels": funnels_list,
         "touches": touches_list
     }
+
+@router.post("/process_queue")
+async def trigger_process_queue():
+    """
+    Manually triggers process_outreach_queue_async to process pending emails immediately.
+    """
+    from app.workers.outreach_tasks import process_outreach_queue_async
+    asyncio.create_task(process_outreach_queue_async())
+    return {"status": "success", "message": "Queue processing triggered."}
+
