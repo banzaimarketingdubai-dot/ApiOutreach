@@ -100,3 +100,11 @@
 - **Спринт 3:** Webhooks от Resend (Авто-стоп при ответе + Unsubscribe).
 - **Спринт 4:** Frontend UI (Колонки в таблице, массовые действия, Funnel Selector).
 - **Спринт 5:** AI-Генератор шаблонов для 3 аудиторий (Настройка промптов).
+- **Спринт 6:** Sandbox Modal и Manual Lead Creation.
+- **Спринт 7:** Analytics Dashboard (Open Rate, Click Rate, Drop-off).
+- **Спринт 8 (Запланировано):** Google OAuth Авторизация для админов (Ограничение доступа).- **Спринт 6:** Sandbox Modal и Manual Lead Creation.
+- **Спринт 7:** Analytics Dashboard (Open Rate, Click Rate, Drop-off).
+- **Спринт 8 (Запланировано):** Google OAuth Авторизация для админов (Ограничение доступа).
+
+---
+*Документ автоматически поддерживается и обновляется.*

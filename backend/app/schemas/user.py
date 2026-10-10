@@ -25,3 +25,10 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class GoogleAuthRequest(BaseModel):
+    credential: str  # Google ID Token
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+

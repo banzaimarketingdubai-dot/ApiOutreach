@@ -1,34 +1,13 @@
 import asyncio
-import os
-import sys
-
-# Add the project root to sys.path
-sys.path.insert(0, r"c:\Sher_AI_Studio\projects\Apify Outreach\backend")
-
-from app.db.session import SessionLocal
-from app.models.campaign import Campaign, CampaignStatus
-from sqlalchemy import select
+import httpx
 
 async def main():
-    async with SessionLocal() as db:
-        campaign_id = "a9eee752-04b2-464c-864d-b53beedb8359"
-        stmt = select(Campaign).where(Campaign.id == campaign_id)
-        res = await db.execute(stmt)
-        c = res.scalars().first()
-        
-        if c:
-            c.status = CampaignStatus.PAUSED
-            
-            from datetime import datetime
-            log_entry = {"level": "warning", "message": "Campaign paused by operator.", "timestamp": datetime.utcnow().isoformat() + "Z"}
-            new_logs = list(c.logs) if c.logs else []
-            new_logs.append(log_entry)
-            c.logs = new_logs
-            
-            await db.commit()
-            print("Successfully updated campaign!")
-        else:
-            print("Campaign not found")
+    async with httpx.AsyncClient() as client:
+        res = await client.get('https://web-production-c4d98.up.railway.app/api/v1/leads?skip=0&limit=100')
+        data = res.json()
+        for item in data:
+            if "Kika-Style" in item.get('company_name', ''):
+                print(item.get('company_name'), item.get('rating'), item.get('reviews_count'))
 
 if __name__ == "__main__":
     asyncio.run(main())

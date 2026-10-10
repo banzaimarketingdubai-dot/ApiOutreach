@@ -4,11 +4,20 @@ const API_BASE = IS_PROD
   ? 'https://web-production-c4d98.up.railway.app/api/v1'
   : '/api/v1';
 
+function getHeaders(extraHeaders = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders
+  };
+}
+
 export async function apiCall(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_ROOT}${endpoint}`;
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options
+    ...options,
+    headers: getHeaders(options.headers)
   });
   if (!res.ok) {
     let errorDetail = res.statusText;
@@ -20,6 +29,26 @@ export async function apiCall(endpoint, options = {}) {
   }
   return res.json();
 }
+
+// Authentication API
+export async function loginWithGoogle(credential, email, name, picture) {
+  return apiCall(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    body: JSON.stringify({ credential, email, name, picture })
+  });
+}
+
+export async function loginWithPassword(email, password) {
+  return apiCall(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  });
+}
+
+export async function fetchCurrentUser() {
+  return apiCall(`${API_BASE}/auth/me`);
+}
+
 
 export async function fetchLeads(params = {}) {
   const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined && v !== 'null'));

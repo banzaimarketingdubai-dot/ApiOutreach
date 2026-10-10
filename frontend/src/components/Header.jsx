@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target, BarChart2 } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
-export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId }) {
+export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId, user, onLogout }) {
   const [apifyData, setApifyData] = useState(null);
 
   useEffect(() => {
@@ -151,6 +151,25 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
             <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             <span>AI Strategist Co-pilot</span>
           </button>
+
+          {/* User Profile Badge & Logout */}
+          {user && (
+            <div className="flex items-center space-x-2 pl-2 border-l border-slate-800">
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="text-xs font-semibold text-slate-200 truncate max-w-[120px]">{user.full_name || 'Admin'}</span>
+                <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{user.email}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                title="Выйти из аккаунта"
+                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
       </div>

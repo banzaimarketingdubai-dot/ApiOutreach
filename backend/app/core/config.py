@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "revo_super_secret_key_change_me_in_prod"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ALLOWED_ADMIN_EMAILS: str = "ceo@gbpilot.top,admin@gbpilot.top,admin@revo.ai"
+    GOOGLE_CLIENT_ID: Optional[str] = None
     
     # Database & Cache
     DATABASE_URL: str = "postgresql+asyncpg://revo_user:revo_secret@localhost:5432/revo_masterdata"

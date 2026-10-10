@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon } from 'lucide-react';
+import { Search, Download, Filter, Star, Globe, Phone, Mail, MessageSquare, MapPin, ExternalLink, Flame, Play, Cloud, Send, MessageCircle, XOctagon, MoreVertical } from 'lucide-react';
 import { getExportCsvUrl, checkMessengers, exportLeadRadar, startFunnel, pauseFunnel, resumeFunnel } from '../services/api';
 import DryRunModal from './DryRunModal';
 import CRMExportModal from './CRMExportModal';
@@ -19,6 +19,7 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
   const [outreachLead, setOutreachLead] = useState(null);
   const [isCheckingMessengers, setIsCheckingMessengers] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const handleSort = (column) => {
     if (filters.sort_by === column) {
@@ -292,56 +293,67 @@ export default function MasterDataGrid({ leads = [], onSelectLead, filters, setF
             />
           </div>
 
-          <button
-            onClick={handleOutreachSync}
-            disabled={isSyncing || selectedCount === 0}
-            className={`flex items-center px-4 py-2 text-xs font-semibold rounded-xl border transition-all ml-auto ${
-              isSyncing || selectedCount === 0
-                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.6)]'
-            }`}
-          >
-            <Send className={`w-4 h-4 mr-1.5 ${isSyncing ? 'animate-pulse' : ''}`} />
-            <span>{isSyncing ? 'Syncing...' : 'Outreach Sync'}</span>
-          </button>
-
-          <button
-            onClick={handleCheckMessengers}
-            disabled={isCheckingMessengers || selectedCount === 0}
-            className={`flex items-center px-4 py-2 text-xs font-semibold rounded-xl border transition-all ml-auto ${
-              isCheckingMessengers || selectedCount === 0
-                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-indigo-600/20 border-indigo-500/50 text-indigo-400 hover:bg-indigo-500 hover:text-white shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_-3px_rgba(99,102,241,0.6)]'
-            }`}
-          >
-            <MessageCircle className={`w-4 h-4 mr-1.5 ${isCheckingMessengers ? 'animate-pulse' : ''}`} />
-            <span>{isCheckingMessengers ? 'Checking...' : 'Check Messengers'}</span>
-          </button>
-
-          <button
-            onClick={() => setCrmModalOpen(true)}
-            disabled={leads.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold border border-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
-          >
-            <Cloud className="w-3.5 h-3.5" />
-            <span>CRM Sync</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all shrink-0"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-          
-          <button
-            onClick={() => setCreateLeadModalOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-500/30 text-purple-400 text-xs font-semibold border border-purple-500/50 transition-all shrink-0 ml-2"
-          >
-            <Star className="w-3.5 h-3.5" />
-            <span>Add Test Lead</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setActionsOpen(!actionsOpen)}
+              className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all"
+            >
+              <span>More Actions</span>
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+            
+            {actionsOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                <button
+                  onClick={() => { setActionsOpen(false); handleOutreachSync(); }}
+                  disabled={isSyncing || selectedCount === 0}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 text-emerald-400 flex items-center space-x-2"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Outreach Sync</span>
+                </button>
+                <button
+                  onClick={() => { setActionsOpen(false); handleCheckMessengers(); }}
+                  disabled={isCheckingMessengers || selectedCount === 0}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 text-indigo-400 flex items-center space-x-2"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Check Messengers</span>
+                </button>
+                <button
+                  onClick={() => { setActionsOpen(false); setCrmModalOpen(true); }}
+                  disabled={leads.length === 0}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 text-blue-400 flex items-center space-x-2"
+                >
+                  <Cloud className="w-3.5 h-3.5" />
+                  <span>CRM Sync</span>
+                </button>
+                <div className="h-px bg-slate-800 my-1"></div>
+                <button
+                  onClick={() => { setActionsOpen(false); setCreateLeadModalOpen(true); }}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-purple-400 flex items-center space-x-2"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  <span>Add Test Lead</span>
+                </button>
+                <button
+                  onClick={() => { setActionsOpen(false); handleExportCSV(); }}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 flex items-center space-x-2"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            )}
+            
+            {/* Overlay to close dropdown when clicking outside */}
+            {actionsOpen && (
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setActionsOpen(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
 

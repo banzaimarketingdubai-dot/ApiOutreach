@@ -9,15 +9,24 @@ import MergeCenter from './components/MergeCenter';
 import AdminPanel from './components/AdminPanel';
 import OutreachBuilder from './components/OutreachBuilder';
 import PromoTrack from './components/PromoTrack';
-import AnalyticsDashboard from './components/AnalyticsDashboard';
+import AdminLoginModal from './components/AdminLoginModal';
 import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
 
 export default function App() {
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [activeTab, setActiveTab] = useState('leads'); // 'leads' or 'builder'
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
   const [globalCampaignId, setGlobalCampaignId] = useState('');
+
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [stats, setStats] = useState({ total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
@@ -71,6 +80,20 @@ export default function App() {
     loadStats();
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans flex items-center justify-center">
+        <AdminLoginModal onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col">
       
@@ -82,6 +105,8 @@ export default function App() {
         campaigns={campaigns}
         globalCampaignId={globalCampaignId}
         setGlobalCampaignId={setGlobalCampaignId}
+        user={user}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
