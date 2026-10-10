@@ -23,5 +23,7 @@ async def get_api_key(provider: str) -> str:
         return settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
     elif provider.lower() == "hubspot":
         return os.getenv("HUBSPOT_API_KEY")
+    elif provider.lower() == "groq":
+        return os.getenv("GROQ_API_KEY")
         
     return None
