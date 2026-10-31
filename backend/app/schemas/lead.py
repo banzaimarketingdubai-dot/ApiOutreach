@@ -26,11 +26,16 @@ class LeadBase(BaseModel):
     revo_score: Optional[int] = 100
     audit_notes: Optional[str] = None
     custom_data: Optional[Dict[str, Any]] = {}
+    is_unsubscribed: Optional[bool] = False
 
 class LeadCreate(LeadBase):
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     contacts: List[ContactCreate] = []
 
 class LeadUpdate(BaseModel):
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     company_name: Optional[str] = None
     business_type: Optional[str] = None
     city: Optional[str] = None
@@ -41,9 +46,12 @@ class LeadUpdate(BaseModel):
     revo_score: Optional[int] = None
     audit_notes: Optional[str] = None
     custom_data: Optional[Dict[str, Any]] = None
+    is_unsubscribed: Optional[bool] = None
 
 class LeadResponse(LeadBase):
     id: UUID
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     campaign_id: Optional[UUID] = None
     contacts: List[ContactResponse] = []
     email_sequences: List[EmailSequenceBase] = []
@@ -54,6 +62,8 @@ class LeadResponse(LeadBase):
         from_attributes = True
 
 class LeadFilter(BaseModel):
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     niche: Optional[str] = None
     city: Optional[str] = None
     has_whatsapp: Optional[bool] = None

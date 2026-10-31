@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, Send, Target, BarChart2, Shield } from 'lucide-react';
+import { 
+  Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, 
+  Send, Target, BarChart2, Shield, Users, Briefcase, Plus,
+  Package, ShieldCheck, Inbox
+} from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
-export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, campaigns = [], globalCampaignId, setGlobalCampaignId, user, onLogout }) {
+export default function Header({ 
+  onOpenAIStrategist, 
+  activeTab, 
+  setActiveTab, 
+  campaigns = [], 
+  globalCampaignId, 
+  setGlobalCampaignId, 
+  user, 
+  onLogout,
+  projects = [],
+  currentProjectId,
+  setCurrentProjectId,
+  onOpenCreateProject
+}) {
   const [apifyData, setApifyData] = useState(null);
 
   useEffect(() => {
@@ -13,9 +30,9 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
 
   return (
     <header className="border-b border-slate-800 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3">
         
-        {/* Brand & Workspace Selector (Fixed Left) */}
+        {/* Brand & Project Workspace Selector */}
         <div className="flex items-center space-x-3 flex-shrink-0">
           <div className="flex items-center space-x-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20 flex-shrink-0">
@@ -25,27 +42,113 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent leading-none mb-0.5">
                 REVO
               </span>
-              <p className="text-[9px] text-slate-400 leading-none">AI Lead Gen</p>
+              <p className="text-[9px] text-slate-400 leading-none">B2B Outreach OS</p>
             </div>
           </div>
           
           <div className="hidden md:block h-6 w-px bg-slate-800"></div>
 
-          <select
-            value={globalCampaignId}
-            onChange={(e) => setGlobalCampaignId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-white font-semibold rounded-lg text-xs px-2 py-1.5 focus:ring focus:ring-blue-500/50 outline-none hover:bg-slate-800 transition-colors cursor-pointer w-32 md:w-40 truncate"
-          >
-            <option value="">Global</option>
-            {campaigns.map(c => (
-              <option key={c.id} value={c.id}>{c.campaign_name}</option>
-            ))}
-          </select>
+          {/* Project Workspace Dropdown */}
+          <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2 py-1">
+            <Briefcase className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+            <select
+              value={currentProjectId || ''}
+              onChange={(e) => setCurrentProjectId(e.target.value)}
+              className="bg-transparent text-white font-semibold rounded text-xs py-0.5 focus:outline-none cursor-pointer w-28 sm:w-36 truncate"
+              title="Выберите активный проект"
+            >
+              {projects.map(p => (
+                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-100">
+                  {p.name}
+                </option>
+              ))}
+              {projects.length === 0 && (
+                <option value="" disabled className="bg-slate-900 text-slate-400">
+                  Загрузка...
+                </option>
+              )}
+            </select>
+            {onOpenCreateProject && (
+              <button
+                onClick={onOpenCreateProject}
+                title="Создать новый проект"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Center: Scrollable Nav Tabs */}
         <div className="flex-1 flex overflow-x-auto hide-scrollbar [scrollbar-width:none] px-1 mask-linear-fade">
           <nav className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 flex-shrink-0 mx-auto space-x-1">
+            
+            {/* NEW: Audiences Tab */}
+            <button
+              onClick={() => setActiveTab('audiences')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'audiences'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Аудитории</span>
+            </button>
+
+            {/* NEW: Products Tab */}
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'products'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Продукты</span>
+            </button>
+
+            {/* NEW: AI Funnel Studio Tab */}
+            <button
+              onClick={() => setActiveTab('funnel')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'funnel'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden lg:inline">AI Воронка</span>
+            </button>
+
+            {/* NEW: Manual Review Queue Tab */}
+            <button
+              onClick={() => setActiveTab('review')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'review'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden lg:inline">Модерация</span>
+            </button>
+
+            {/* NEW: Smart Inbox Tab */}
+            <button
+              onClick={() => setActiveTab('inbox')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'inbox'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5 text-emerald-300" />
+              <span className="hidden lg:inline">Smart Inbox</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('leads')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -146,7 +249,7 @@ export default function Header({ onOpenAIStrategist, activeTab, setActiveTab, ca
           </nav>
         </div>
 
-        {/* Right: Actions & Profile (Fixed Right) */}
+        {/* Right: Actions & Profile */}
         <div className="flex items-center space-x-3 flex-shrink-0">
 
           <button

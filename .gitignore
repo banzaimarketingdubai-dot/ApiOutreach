@@ -33,4 +33,6 @@ outreach_log.txt
 .DS_Store
 .vscode/
 .idea/
+backend/scratch*.py
+scratch*.py
 

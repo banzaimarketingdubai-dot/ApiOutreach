@@ -104,6 +104,8 @@ def apply_lead_filters(stmt, filters_dict: dict = None):
     min_rating = filters_dict.get("min_rating")
     max_rating = filters_dict.get("max_rating")
     campaign_id = filters_dict.get("campaign_id")
+    project_id = filters_dict.get("project_id")
+    audience_id = filters_dict.get("audience_id")
     search = filters_dict.get("search")
     has_whatsapp = filters_dict.get("has_whatsapp")
     has_telegram = filters_dict.get("has_telegram")
@@ -136,6 +138,8 @@ def apply_lead_filters(stmt, filters_dict: dict = None):
     if min_rating_val is not None: filters.append(Lead.rating >= min_rating_val)
     if max_rating_val is not None: filters.append(Lead.rating <= max_rating_val)
     if campaign_id and not hasattr(campaign_id, 'default'): filters.append(Lead.campaign_id == campaign_id)
+    if project_id and not hasattr(project_id, 'default'): filters.append(Lead.project_id == project_id)
+    if audience_id and not hasattr(audience_id, 'default'): filters.append(Lead.audience_id == audience_id)
     if search and isinstance(search, str) and search.strip(): filters.append(or_(Lead.company_name.ilike(f"%{search}%"), Lead.address.ilike(f"%{search}%"), Lead.website.ilike(f"%{search}%")))
 
 
@@ -188,6 +192,8 @@ async def list_leads(
     search: Optional[str] = Query(None),
     enrichment_status: Optional[str] = Query(None),
     campaign_id: Optional[UUID] = Query(None),
+    project_id: Optional[UUID] = Query(None),
+    audience_id: Optional[UUID] = Query(None),
     sort_by: Optional[str] = Query("created_at"),
     sort_order: Optional[str] = Query("desc"),
     page: int = Query(1, ge=1),
@@ -202,6 +208,7 @@ async def list_leads(
             "niche": niche, "city": city, "has_website": has_website,
             "min_score": min_score, "min_rating": min_rating, "max_rating": max_rating,
             "search": search, "campaign_id": campaign_id,
+            "project_id": project_id, "audience_id": audience_id,
             "has_whatsapp": has_whatsapp, "has_telegram": has_telegram, "has_viber": has_viber,
             "has_email": has_email, "has_phone": has_phone,
             "enrichment_status": enrichment_status

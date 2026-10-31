@@ -149,7 +149,12 @@ def run_campaign_scraping(self, campaign_id: str):
                     "source": "gmaps"
                 }
 
-                lead_obj, is_new = await merger.merge_or_create_lead(lead_data, campaign_id=campaign.id)
+                lead_obj, is_new = await merger.merge_or_create_lead(
+                    lead_data,
+                    campaign_id=campaign.id,
+                    project_id=campaign.project_id,
+                    audience_id=campaign.audience_id
+                )
                 if is_new:
                     saved_count += 1
                 else:
@@ -163,6 +168,21 @@ def run_campaign_scraping(self, campaign_id: str):
             if campaign.status != CampaignStatus.CANCELLED:
                 campaign.status = CampaignStatus.COMPLETED
                 await add_log("success", f"Scraping completed. Added {saved_count} new leads, merged {merged_count}.")
+            await db.commit()
+
+            # Refresh audience stats if linked to an audience
+            if campaign.audience_id:
+                try:
+                    from app.api.audiences import compute_audience_stats
+                    from app.models.audience import Audience
+                    aud_stats = await compute_audience_stats(db, campaign.audience_id)
+                    aud_res = await db.execute(select(Audience).where(Audience.id == campaign.audience_id))
+                    target_aud = aud_res.scalars().first()
+                    if target_aud:
+                        target_aud.stats = aud_stats
+                        await db.commit()
+                except Exception as aud_stat_err:
+                    logger.warning(f"Failed to refresh audience stats: {aud_stat_err}")
             await db.commit()
 
             # Trigger Enrichment task for leads with website

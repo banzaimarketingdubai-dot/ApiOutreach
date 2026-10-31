@@ -6,6 +6,8 @@ from app.models.campaign import CampaignStatus
 from app.schemas.ai_strategist import CampaignConfigGenerated
 
 class CampaignCreate(BaseModel):
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     campaign_name: str
     target_geo: Optional[str] = None
     target_niches: List[str] = []
@@ -13,6 +15,8 @@ class CampaignCreate(BaseModel):
 
 class CampaignUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     campaign_name: Optional[str] = None
     target_geo: Optional[str] = None
     target_niches: Optional[List[str]] = None
@@ -21,6 +25,8 @@ class CampaignUpdate(BaseModel):
 
 class CampaignResponse(BaseModel):
     id: UUID
+    project_id: Optional[UUID] = None
+    audience_id: Optional[UUID] = None
     campaign_name: str
     status: CampaignStatus
     target_geo: Optional[str] = None

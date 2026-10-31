@@ -16,14 +16,22 @@ from app.api.settings import router as settings_router
 from app.api.templates import router as templates_router
 from app.api.outreach import router as outreach_router
 from app.api.users import router as users_router
+from app.api.projects import router as projects_router
+from app.api.products import router as products_router
+from app.api.audiences import router as audiences_router
+from app.api.funnels import router as funnels_router
 
 # Import models so Base.metadata is fully populated for create_all
 import app.models.user
+import app.models.project
+import app.models.product
+import app.models.audience
 import app.models.lead
 import app.models.contact
 import app.models.outreach_campaign
 import app.models.email_sequence
-
+import app.models.funnel
+import app.models.inbound_reply
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +45,17 @@ async def lifespan(app: FastAPI):
             
             statements = [
                 "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS logs JSONB DEFAULT '[]'::jsonb;",
+                "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;",
+                "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS audience_id UUID REFERENCES audiences(id) ON DELETE SET NULL;",
                 "ALTER TABLE leads ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;",
+                "ALTER TABLE leads ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE CASCADE;",
+                "ALTER TABLE leads ADD COLUMN IF NOT EXISTS audience_id UUID REFERENCES audiences(id) ON DELETE SET NULL;",
                 "ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_unsubscribed BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE CASCADE;",
+                "ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS product_id UUID REFERENCES products(id) ON DELETE SET NULL;",
+                "ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS audience_id UUID REFERENCES audiences(id) ON DELETE SET NULL;",
+                "ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS schedule_config JSONB DEFAULT '{}'::jsonb;",
+                "ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS is_manual_review_required BOOLEAN DEFAULT FALSE;",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS funnel_type VARCHAR(100) DEFAULT 'EMPATHY_AUDIT';",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS current_touch INTEGER DEFAULT 1;",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';",
@@ -49,7 +66,6 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP WITH TIME ZONE;",
                 "ALTER TABLE email_sequences ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP WITH TIME ZONE;",
                 "ALTER TABLE email_sequences ALTER COLUMN campaign_id DROP NOT NULL;"
-
             ]
             
             for stmt_text in statements:
@@ -58,7 +74,55 @@ async def lifespan(app: FastAPI):
                 except Exception as stmt_err:
                     logger.warning(f"Migration statement skipped ({stmt_text}): {stmt_err}")
 
-        
+            # Auto-seed Default Project & Default Audience for existing data
+            try:
+                import uuid
+                proj_check = await conn.execute(text("SELECT id FROM projects WHERE is_default = TRUE LIMIT 1;"))
+                default_proj_id = proj_check.scalar()
+                if not default_proj_id:
+                    proj_any = await conn.execute(text("SELECT id FROM projects ORDER BY created_at ASC LIMIT 1;"))
+                    default_proj_id = proj_any.scalar()
+                    if not default_proj_id:
+                        default_proj_id = uuid.uuid4()
+                        await conn.execute(
+                            text("INSERT INTO projects (id, name, description, is_default, settings) VALUES (:id, :name, :desc, TRUE, '{}'::jsonb)"),
+                            {"id": default_proj_id, "name": "Revo / GBPilot Master", "desc": "Default workspace migrated from v1"}
+                        )
+                    else:
+                        await conn.execute(text("UPDATE projects SET is_default = TRUE WHERE id = :id"), {"id": default_proj_id})
+
+                # Check default Audience
+                aud_check = await conn.execute(text("SELECT id FROM audiences WHERE project_id = :proj_id LIMIT 1;"), {"proj_id": default_proj_id})
+                default_aud_id = aud_check.scalar()
+                if not default_aud_id:
+                    default_aud_id = uuid.uuid4()
+                    await conn.execute(
+                        text("INSERT INTO audiences (id, project_id, name, description, source_type, stats) VALUES (:id, :proj_id, :name, :desc, 'LEGACY', '{}'::jsonb)"),
+                        {"id": default_aud_id, "proj_id": default_proj_id, "name": "Master Database (Migrated)", "desc": "Initial migrated database"}
+                    )
+
+                # Backfill leads
+                await conn.execute(
+                    text("UPDATE leads SET project_id = :proj_id WHERE project_id IS NULL"),
+                    {"proj_id": default_proj_id}
+                )
+                await conn.execute(
+                    text("UPDATE leads SET audience_id = :aud_id WHERE audience_id IS NULL"),
+                    {"aud_id": default_aud_id}
+                )
+
+                # Backfill campaigns
+                await conn.execute(
+                    text("UPDATE campaigns SET project_id = :proj_id WHERE project_id IS NULL"),
+                    {"proj_id": default_proj_id}
+                )
+                await conn.execute(
+                    text("UPDATE outreach_campaigns SET project_id = :proj_id WHERE project_id IS NULL"),
+                    {"proj_id": default_proj_id}
+                )
+            except Exception as seed_err:
+                logger.warning(f"Default project/audience seeding skipped: {seed_err}")
+
         # Postgres ALTER TYPE cannot run inside a transaction block
         async with engine.connect() as conn:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
@@ -85,7 +149,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.warning(f"Failed to upgrade superadmins: {e}")
             
-        logger.info("Database tables initialized successfully.")
+        logger.info("Database tables and multi-project schema initialized successfully.")
 
     except Exception as e:
         logger.warning(f"Database table initialization skipped/warning: {e}")
@@ -109,6 +173,10 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["Auth"])
+app.include_router(projects_router, prefix=f"{settings.API_V1_STR}/projects", tags=["Projects"])
+app.include_router(products_router, prefix=f"{settings.API_V1_STR}/products", tags=["Products"])
+app.include_router(audiences_router, prefix=f"{settings.API_V1_STR}/audiences", tags=["Audiences"])
+app.include_router(funnels_router, prefix=f"{settings.API_V1_STR}/funnels", tags=["Funnels"])
 app.include_router(ai_router, prefix=f"{settings.API_V1_STR}/ai", tags=["AI Strategist"])
 app.include_router(campaigns_router, prefix=f"{settings.API_V1_STR}/campaigns", tags=["Campaigns"])
 app.include_router(leads_router, prefix=f"{settings.API_V1_STR}/leads", tags=["Leads"])

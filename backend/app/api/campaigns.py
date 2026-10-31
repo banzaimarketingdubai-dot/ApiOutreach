@@ -19,6 +19,8 @@ async def create_campaign(
     current_user: User = Depends(get_current_user)
 ):
     campaign = Campaign(
+        project_id=body.project_id,
+        audience_id=body.audience_id,
         campaign_name=body.campaign_name,
         target_geo=body.target_geo or body.ai_config.target_geo,
         target_niches=body.target_niches or body.ai_config.target_niches,

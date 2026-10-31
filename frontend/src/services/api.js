@@ -251,8 +251,19 @@ export async function generateSandboxFunnel(lead_id, funnel_type) {
   });
 }
 
-export async function fetchAnalytics(campaignId) {
-  const query = campaignId ? `?campaign_id=${campaignId}` : '';
+export async function fetchAnalytics(params = {}) {
+  let query = '';
+  if (typeof params === 'string') {
+    query = params ? `?campaign_id=${encodeURIComponent(params)}` : '';
+  } else if (params && typeof params === 'object') {
+    const q = new URLSearchParams();
+    if (params.project_id) q.set('project_id', params.project_id);
+    if (params.campaign_id) q.set('campaign_id', params.campaign_id);
+    if (params.product_id) q.set('product_id', params.product_id);
+    if (params.audience_id) q.set('audience_id', params.audience_id);
+    const qs = q.toString();
+    query = qs ? `?${qs}` : '';
+  }
   return apiCall(`${API_BASE}/outreach/analytics${query}`);
 }
 
@@ -285,4 +296,245 @@ export async function deleteUser(userId) {
     throw new Error(errorData.detail || 'API request failed');
   }
   return true;
+}
+
+// =============== MULTI-PROJECT & AUDIENCES API ===============
+
+// --- Projects ---
+export async function fetchProjects() {
+  return apiCall(`${API_BASE}/projects`);
+}
+
+export async function createProject(projectData) {
+  return apiCall(`${API_BASE}/projects`, {
+    method: 'POST',
+    body: JSON.stringify(projectData)
+  });
+}
+
+export async function updateProject(projectId, data) {
+  return apiCall(`${API_BASE}/projects/${projectId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteProject(projectId) {
+  const res = await fetch(`${API_ROOT}${API_BASE}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete project');
+  }
+  return true;
+}
+
+// --- Audiences ---
+export async function fetchAudiences(projectId) {
+  const query = projectId ? `?project_id=${projectId}` : '';
+  return apiCall(`${API_BASE}/audiences${query}`);
+}
+
+export async function createAudience(audienceData) {
+  return apiCall(`${API_BASE}/audiences`, {
+    method: 'POST',
+    body: JSON.stringify(audienceData)
+  });
+}
+
+export async function updateAudience(audienceId, data) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteAudience(audienceId) {
+  const res = await fetch(`${API_ROOT}${API_BASE}/audiences/${audienceId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete audience');
+  }
+  return true;
+}
+
+export async function importAudienceRows(audienceId, rows) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}/import-rows`, {
+    method: 'POST',
+    body: JSON.stringify({ rows })
+  });
+}
+
+export async function importAudienceFile(audienceId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const res = await fetch(`${API_ROOT}${API_BASE}/audiences/${audienceId}/import-file`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to import file');
+  }
+  return res.json();
+}
+
+export async function enrichAudience(audienceId, options = {}) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}/enrich`, {
+    method: 'POST',
+    body: JSON.stringify(options)
+  });
+}
+
+export async function recalculateAudienceStats(audienceId) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}/recalculate-stats`, {
+    method: 'POST'
+  });
+}
+
+// --- Products ---
+export async function fetchProducts(projectId) {
+  const query = projectId ? `?project_id=${projectId}` : '';
+  return apiCall(`${API_BASE}/products${query}`);
+}
+
+export async function createProduct(productData) {
+  return apiCall(`${API_BASE}/products`, {
+    method: 'POST',
+    body: JSON.stringify(productData)
+  });
+}
+
+export async function updateProduct(productId, data) {
+  return apiCall(`${API_BASE}/products/${productId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteProduct(productId) {
+  const res = await fetch(`${API_ROOT}${API_BASE}/products/${productId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete product');
+  }
+  return true;
+}
+
+// --- Funnel Sequences & AI Studio ---
+export async function fetchFunnels(projectId, productId) {
+  let query = '';
+  const params = [];
+  if (projectId) params.push(`project_id=${projectId}`);
+  if (productId) params.push(`product_id=${productId}`);
+  if (params.length > 0) query = `?${params.join('&')}`;
+  return apiCall(`${API_BASE}/funnels${query}`);
+}
+
+export async function createFunnel(funnelData) {
+  return apiCall(`${API_BASE}/funnels`, {
+    method: 'POST',
+    body: JSON.stringify(funnelData)
+  });
+}
+
+export async function updateFunnel(funnelId, data) {
+  return apiCall(`${API_BASE}/funnels/${funnelId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteFunnel(funnelId) {
+  const res = await fetch(`${API_ROOT}${API_BASE}/funnels/${funnelId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete funnel');
+  }
+  return true;
+}
+
+export async function generateAIFunnel(payload) {
+  return apiCall(`${API_BASE}/funnels/ai-generate`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function renderEmailPreview(payload) {
+  return apiCall(`${API_BASE}/funnels/render-preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// --- Multi-Campaign Launch, Review Queue & Smart Inbox ---
+export async function launchMultiCampaign(campaignData) {
+  return apiCall(`${API_BASE}/outreach/launch-multi-campaign`, {
+    method: 'POST',
+    body: JSON.stringify(campaignData)
+  });
+}
+
+export async function fetchReviewQueue(params = {}) {
+  const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined));
+  const query = new URLSearchParams(cleanParams).toString();
+  return apiCall(`${API_BASE}/outreach/review-queue?${query}`);
+}
+
+export async function approveReviewDrafts(payload) {
+  return apiCall(`${API_BASE}/outreach/review-queue/approve`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function rejectReviewDrafts(sequenceIds) {
+  return apiCall(`${API_BASE}/outreach/review-queue/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ sequence_ids: sequenceIds })
+  });
+}
+
+export async function updateReviewDraft(sequenceId, data) {
+  return apiCall(`${API_BASE}/outreach/review-queue/${sequenceId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function fetchInboundReplies(params = {}) {
+  const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined));
+  const query = new URLSearchParams(cleanParams).toString();
+  return apiCall(`${API_BASE}/outreach/inbox?${query}`);
+}
+
+export async function simulateInboundReply(payload) {
+  return apiCall(`${API_BASE}/outreach/inbox/simulate-reply`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function sendInboxResponse(replyId, payload) {
+  return apiCall(`${API_BASE}/outreach/inbox/${replyId}/send-response`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }

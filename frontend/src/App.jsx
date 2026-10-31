@@ -12,7 +12,14 @@ import PromoTrack from './components/PromoTrack';
 import AdminLoginModal from './components/AdminLoginModal';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import UserManagementDashboard from './components/UserManagementDashboard';
-import { fetchLeads, fetchCampaigns, fetchStats } from './services/api';
+import AudiencesHub from './components/AudiencesHub';
+import ProductsHub from './components/ProductsHub';
+import FunnelStudio from './components/FunnelStudio';
+import CreateProjectModal from './components/CreateProjectModal';
+import ReviewQueue from './components/ReviewQueue';
+import InboxHub from './components/InboxHub';
+import CampaignLaunchModal from './components/CampaignLaunchModal';
+import { fetchLeads, fetchCampaigns, fetchStats, fetchProjects } from './services/api';
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -23,7 +30,19 @@ export default function App() {
       return null;
     }
   });
-  const [activeTab, setActiveTab] = useState('leads'); // 'leads' or 'builder'
+
+  // Projects state
+  const [projects, setProjects] = useState([]);
+  const [currentProjectId, setCurrentProjectId] = useState(() => {
+    return localStorage.getItem('current_project_id') || '';
+  });
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
+  const [launchModalPreset, setLaunchModalPreset] = useState(null);
+  const [selectedAudienceId, setSelectedAudienceId] = useState('');
+  const [activeProductIdForFunnel, setActiveProductIdForFunnel] = useState(null);
+
+  const [activeTab, setActiveTab] = useState('audiences'); // default to 'audiences' hub in multi-project flow
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
@@ -32,19 +51,50 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [stats, setStats] = useState({ total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
-  const [filters, setFilters] = useState({ city: '', min_score: '', min_rating: '', max_rating: '', search: '', sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, has_whatsapp: '', has_telegram: '', has_viber: '', has_email: '', has_phone: '' });
+  const [filters, setFilters] = useState({ 
+    city: '', min_score: '', min_rating: '', max_rating: '', search: '', 
+    sort_by: 'created_at', sort_order: 'desc', page_size: 50, page: 1, 
+    has_whatsapp: '', has_telegram: '', has_viber: '', has_email: '', has_phone: '' 
+  });
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
   const handleApiError = (err) => {
     console.warn('Background data fetch notice:', err);
   };
 
+  const loadProjects = async () => {
+    if (!user) return;
+    try {
+      const projs = await fetchProjects();
+      setProjects(projs || []);
+      if (projs && projs.length > 0) {
+        // If current project id is not in the list, set to default or first
+        const exists = projs.find(p => p.id === currentProjectId);
+        if (!exists) {
+          const defaultProj = projs.find(p => p.is_default) || projs[0];
+          setCurrentProjectId(defaultProj.id);
+          localStorage.setItem('current_project_id', defaultProj.id);
+        }
+      }
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const handleProjectChange = (newProjId) => {
+    setCurrentProjectId(newProjId);
+    setSelectedAudienceId('');
+    localStorage.setItem('current_project_id', newProjId);
+  };
 
   const loadLeads = async () => {
     if (!user) return;
     try {
       const fetchFilters = { ...filters };
       if (globalCampaignId) fetchFilters.campaign_id = globalCampaignId;
+      if (currentProjectId) fetchFilters.project_id = currentProjectId;
+      if (selectedAudienceId) fetchFilters.audience_id = selectedAudienceId;
+
       const data = await fetchLeads(fetchFilters);
       setLeads(data.items || []);
       setPagination({ total: data.total || 0, total_pages: data.total_pages || 1 });
@@ -73,27 +123,28 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    loadProjects();
+    loadCampaigns();
+    loadStats();
+  }, [user]);
 
   useEffect(() => {
     loadLeads();
 
-    // Auto-refresh (polling) for real-time AI Queue updates
+    // Auto-refresh (polling) for real-time updates
     const intervalId = setInterval(() => {
       loadLeads();
       loadStats();
-    }, 5000);
+    }, 6000);
 
     return () => clearInterval(intervalId);
-  }, [filters, globalCampaignId]);
-
-  useEffect(() => {
-    loadCampaigns();
-    loadStats();
-  }, []);
+  }, [filters, globalCampaignId, currentProjectId, selectedAudienceId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('current_project_id');
     setUser(null);
   };
 
@@ -108,7 +159,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col">
       
-      {/* Header Navigation */}
+      {/* Header Navigation with Project Switcher */}
       <Header
         onOpenAIStrategist={() => setIsAIModalOpen(true)}
         activeTab={activeTab}
@@ -118,10 +169,14 @@ export default function App() {
         setGlobalCampaignId={setGlobalCampaignId}
         user={user}
         onLogout={handleLogout}
+        projects={projects}
+        currentProjectId={currentProjectId}
+        setCurrentProjectId={handleProjectChange}
+        onOpenCreateProject={() => setIsCreateProjectModalOpen(true)}
       />
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
         
         {/* KPI Cards */}
         <StatsCards 
@@ -132,16 +187,72 @@ export default function App() {
         />
 
         {/* Tab Views */}
-        {activeTab === 'leads' && (
-          <MasterDataGrid
-            leads={leads}
-            onSelectLead={(lead) => setSelectedLead(lead)}
-            filters={filters}
-            setFilters={setFilters}
-            onRefresh={() => { loadLeads(); loadStats(); }}
-            pagination={pagination}
+        {activeTab === 'audiences' && (
+          <AudiencesHub
+            currentProjectId={currentProjectId}
+            onViewLeadsInTable={(audId) => {
+              setSelectedAudienceId(audId);
+              setActiveTab('leads');
+            }}
+            onOpenScraper={() => setActiveTab('builder')}
           />
         )}
+
+        {activeTab === 'products' && (
+          <ProductsHub
+            currentProjectId={currentProjectId}
+            onLaunchFunnelStudio={(prodId) => {
+              setActiveProductIdForFunnel(prodId);
+              setActiveTab('funnel');
+            }}
+          />
+        )}
+
+        {activeTab === 'funnel' && (
+          <FunnelStudio
+            currentProjectId={currentProjectId}
+            initialProductId={activeProductIdForFunnel}
+            onLaunchCampaignWithFunnel={(funnelData) => {
+              setLaunchModalPreset(funnelData);
+              setIsLaunchModalOpen(true);
+            }}
+          />
+        )}
+
+        {activeTab === 'review' && (
+          <ReviewQueue currentProjectId={currentProjectId} />
+        )}
+
+        {activeTab === 'inbox' && (
+          <InboxHub currentProjectId={currentProjectId} />
+        )}
+
+        {activeTab === 'leads' && (
+          <div className="space-y-4">
+            {selectedAudienceId && (
+              <div className="flex items-center justify-between p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-300">
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Фильтр по аудитории активен</span>
+                </div>
+                <button
+                  onClick={() => setSelectedAudienceId('')}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 font-medium transition-colors text-white text-[11px]"
+                >
+                  Сбросить фильтр аудитории
+                </button>
+              </div>
+            )}
+            <MasterDataGrid
+              leads={leads}
+              onSelectLead={(lead) => setSelectedLead(lead)}
+              filters={filters}
+              setFilters={setFilters}
+              onRefresh={() => { loadLeads(); loadStats(); }}
+              pagination={pagination}
+            />
+          </div>
+        )}
+
         {activeTab === 'builder' && (
           <TaskBuilder
             onCampaignCreated={() => { loadCampaigns(); loadLeads(); }}
@@ -166,13 +277,42 @@ export default function App() {
           />
         )}
         {activeTab === 'analytics' && (
-          <AnalyticsDashboard globalCampaignId={globalCampaignId} />
+          <AnalyticsDashboard 
+            currentProjectId={currentProjectId} 
+            projects={projects}
+            globalCampaignId={globalCampaignId} 
+          />
         )}
         {activeTab === 'users' && user?.role === 'SUPER_ADMIN' && (
           <UserManagementDashboard />
         )}
 
       </main>
+
+      {/* Modals */}
+      <CreateProjectModal
+        isOpen={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
+        onProjectCreated={(newProj) => {
+          setProjects(prev => [newProj, ...prev]);
+          handleProjectChange(newProj.id);
+        }}
+      />
+
+      <CampaignLaunchModal
+        isOpen={isLaunchModalOpen}
+        onClose={() => setIsLaunchModalOpen(false)}
+        currentProjectId={currentProjectId}
+        presetData={launchModalPreset}
+        onCampaignLaunched={(campaign) => {
+          setIsLaunchModalOpen(false);
+          if (campaign?.is_manual_review_required) {
+            setActiveTab('review');
+          } else {
+            setActiveTab('outreach');
+          }
+        }}
+      />
 
       {/* AI Strategist Co-pilot Modal */}
       <AIStrategistModal

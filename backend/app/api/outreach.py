@@ -1,18 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, or_
 from typing import List, Optional
 from pydantic import BaseModel
 import os
 import resend
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
+from app.models.user import User
 from app.models.lead import Lead
+from app.models.contact import Contact
+from app.models.project import Project
+from app.models.product import Product
+from app.models.audience import Audience
+from app.models.funnel import FunnelSequence
+from app.models.inbound_reply import InboundReply, ReplyIntent
 from app.models.outreach_campaign import OutreachCampaign, OutreachStatus
 from app.models.email_sequence import EmailSequence, EmailSequenceStatus, PromoTrackStatus, OutreachTemplate
+from app.services.ai_funnel import AIFunnelService
+from app.services.ai_inbox import AIInboxService
 from app.workers.outreach_tasks import generate_email_with_groq
 from app.services.vault_helper import get_api_key
 import asyncio
+import uuid
 
 router = APIRouter()
 
@@ -479,39 +489,80 @@ async def generate_sandbox_funnel(req: SandboxRequest, db: AsyncSession = Depend
 # Analytics
 # =======================
 @router.get("/analytics")
-async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_analytics(
+    project_id: Optional[str] = None,
+    campaign_id: Optional[str] = None,
+    product_id: Optional[str] = None,
+    audience_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Returns aggregated conversion metrics for the dashboard.
+    Returns aggregated conversion metrics for the dashboard split by project, product, and audience.
     """
     try:
-        query = select(EmailSequence)
+        # Build query for EmailSequence joined with Lead and OutreachCampaign
+        query = (
+            select(
+                EmailSequence, 
+                OutreachCampaign.product_id, 
+                OutreachCampaign.audience_id, 
+                Lead.audience_id.label("lead_audience_id")
+            )
+            .outerjoin(Lead, EmailSequence.lead_id == Lead.id)
+            .outerjoin(OutreachCampaign, EmailSequence.campaign_id == OutreachCampaign.id)
+        )
+        
+        if project_id and isinstance(project_id, str) and project_id.strip() and not hasattr(project_id, 'default'):
+            query = query.where(or_(Lead.project_id == project_id, OutreachCampaign.project_id == project_id))
+            
         if campaign_id and isinstance(campaign_id, str) and campaign_id.strip() and not hasattr(campaign_id, 'default'):
             query = query.where(EmailSequence.campaign_id == campaign_id)
             
+        if product_id and isinstance(product_id, str) and product_id.strip() and not hasattr(product_id, 'default'):
+            query = query.where(OutreachCampaign.product_id == product_id)
+            
+        if audience_id and isinstance(audience_id, str) and audience_id.strip() and not hasattr(audience_id, 'default'):
+            query = query.where(or_(Lead.audience_id == audience_id, OutreachCampaign.audience_id == audience_id))
+
         res = await db.execute(query)
-        sequences = res.scalars().all()
+        rows = res.all()
         
-        overall = {"sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+        overall = {
+            "total_sequences": len(rows),
+            "sent": 0,
+            "opened": 0,
+            "clicked": 0,
+            "replied": 0,
+            "bounced": 0,
+            "interested": 0
+        }
         funnels_map = {}
         touches_map = {}
+        product_seq_stats = {}   # prod_id -> {sent, opened, clicked, replied}
+        audience_seq_stats = {}  # aud_id -> {sent, opened, clicked, replied}
         
-        for seq in sequences:
-            # Check overall flags based on status or timestamps
+        for row in rows:
+            seq = row[0]
+            prod_id = str(row[1]) if row[1] else None
+            aud_id = str(row[2] or row[3]) if (row[2] or row[3]) else None
+
+            # Check status flags
             sent = seq.status in [EmailSequenceStatus.SENT, EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED, EmailSequenceStatus.BOUNCED]
             opened = getattr(seq, 'opened_at', None) is not None or seq.status in [EmailSequenceStatus.OPENED, EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
             clicked = getattr(seq, 'clicked_at', None) is not None
             replied = seq.status in [EmailSequenceStatus.REPLIED, EmailSequenceStatus.COMPLETED]
+            bounced = seq.status == EmailSequenceStatus.BOUNCED
             
             if sent: overall["sent"] += 1
             if opened: overall["opened"] += 1
             if clicked: overall["clicked"] += 1
             if replied: overall["replied"] += 1
+            if bounced: overall["bounced"] += 1
             
-            # Group by Funnel Type
+            # Group by Funnel Type (for backward compatibility)
             f_type = seq.funnel_type.value if hasattr(seq.funnel_type, "value") else str(seq.funnel_type or "CUSTOM")
             if f_type not in funnels_map:
                 funnels_map[f_type] = {"name": f_type, "sent": 0, "opened": 0, "clicked": 0, "replied": 0}
-            
             if sent: funnels_map[f_type]["sent"] += 1
             if opened: funnels_map[f_type]["opened"] += 1
             if clicked: funnels_map[f_type]["clicked"] += 1
@@ -520,25 +571,135 @@ async def get_analytics(campaign_id: Optional[str] = None, db: AsyncSession = De
             # Group by Touch Level
             t_level = seq.current_touch or 1
             if t_level not in touches_map:
-                touches_map[t_level] = {"touch_level": t_level, "opened": 0, "clicked": 0}
-            
+                touches_map[t_level] = {"touch_level": t_level, "sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+            if sent: touches_map[t_level]["sent"] += 1
             if opened: touches_map[t_level]["opened"] += 1
             if clicked: touches_map[t_level]["clicked"] += 1
-            
+            if replied: touches_map[t_level]["replied"] += 1
+
+            # Stats by Product
+            if prod_id:
+                if prod_id not in product_seq_stats:
+                    product_seq_stats[prod_id] = {"sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+                if sent: product_seq_stats[prod_id]["sent"] += 1
+                if opened: product_seq_stats[prod_id]["opened"] += 1
+                if clicked: product_seq_stats[prod_id]["clicked"] += 1
+                if replied: product_seq_stats[prod_id]["replied"] += 1
+
+            # Stats by Audience
+            if aud_id:
+                if aud_id not in audience_seq_stats:
+                    audience_seq_stats[aud_id] = {"sent": 0, "opened": 0, "clicked": 0, "replied": 0}
+                if sent: audience_seq_stats[aud_id]["sent"] += 1
+                if opened: audience_seq_stats[aud_id]["opened"] += 1
+                if clicked: audience_seq_stats[aud_id]["clicked"] += 1
+                if replied: audience_seq_stats[aud_id]["replied"] += 1
+
+        # Query Inbound Replies for project/campaign
+        reply_query = select(InboundReply)
+        if project_id and isinstance(project_id, str) and project_id.strip() and not hasattr(project_id, 'default'):
+            reply_query = reply_query.where(InboundReply.project_id == project_id)
+        if campaign_id and isinstance(campaign_id, str) and campaign_id.strip() and not hasattr(campaign_id, 'default'):
+            reply_query = reply_query.where(InboundReply.campaign_id == campaign_id)
+        
+        reply_res = await db.execute(reply_query)
+        inbound_replies = reply_res.scalars().all()
+
+        intents_counter = {
+            "INTERESTED": 0,
+            "QUESTION": 0,
+            "OBJECTION": 0,
+            "UNSUBSCRIBE": 0,
+            "OUT_OF_OFFICE": 0,
+            "NEUTRAL": 0
+        }
+        for r in inbound_replies:
+            intent_val = r.intent.value if hasattr(r.intent, "value") else str(r.intent)
+            if intent_val in intents_counter:
+                intents_counter[intent_val] += 1
+            else:
+                intents_counter["NEUTRAL"] += 1
+
+        overall["interested"] = intents_counter["INTERESTED"]
+
+        # Calculate Rates
+        overall["open_rate"] = round((overall["opened"] / overall["sent"] * 100), 1) if overall["sent"] > 0 else 0
+        overall["click_rate"] = round((overall["clicked"] / overall["opened"] * 100), 1) if overall["opened"] > 0 else 0
+        overall["reply_rate"] = round((overall["replied"] / overall["sent"] * 100), 1) if overall["sent"] > 0 else 0
+        overall["hot_rate"] = round((overall["interested"] / overall["sent"] * 100), 1) if overall["sent"] > 0 else 0
+
+        # Load Products metadata for breakdown
+        by_product = []
+        if project_id and isinstance(project_id, str) and project_id.strip():
+            prod_query = select(Product).where(Product.project_id == project_id)
+            prod_res = await db.execute(prod_query)
+            prods = prod_res.scalars().all()
+            for p in prods:
+                p_id_str = str(p.id)
+                p_stats = product_seq_stats.get(p_id_str, {"sent": 0, "opened": 0, "clicked": 0, "replied": 0})
+                rep_rate = round((p_stats["replied"] / p_stats["sent"] * 100), 1) if p_stats["sent"] > 0 else 0
+                by_product.append({
+                    "product_id": p_id_str,
+                    "name": p.name,
+                    "price_tier": p.price_tier,
+                    "sent": p_stats["sent"],
+                    "opened": p_stats["opened"],
+                    "clicked": p_stats["clicked"],
+                    "replied": p_stats["replied"],
+                    "reply_rate": rep_rate
+                })
+
+        # Load Audiences metadata for breakdown
+        by_audience = []
+        if project_id and isinstance(project_id, str) and project_id.strip():
+            aud_query = select(Audience).where(Audience.project_id == project_id)
+            aud_res = await db.execute(aud_query)
+            audiences_list = aud_res.scalars().all()
+            for a in audiences_list:
+                a_id_str = str(a.id)
+                a_stats = audience_seq_stats.get(a_id_str, {"sent": 0, "opened": 0, "clicked": 0, "replied": 0})
+                rep_rate = round((a_stats["replied"] / a_stats["sent"] * 100), 1) if a_stats["sent"] > 0 else 0
+                by_audience.append({
+                    "audience_id": a_id_str,
+                    "name": a.name,
+                    "source_type": a.source_type,
+                    "total_leads": a.total_leads,
+                    "sent": a_stats["sent"],
+                    "opened": a_stats["opened"],
+                    "clicked": a_stats["clicked"],
+                    "replied": a_stats["replied"],
+                    "reply_rate": rep_rate
+                })
+
         funnels_list = list(funnels_map.values())
         touches_list = sorted(list(touches_map.values()), key=lambda x: x["touch_level"])
         
+        intents_list = [
+            {"intent": "INTERESTED", "label": "🔥 Горячие лиды", "count": intents_counter["INTERESTED"], "color": "#10b981"},
+            {"intent": "QUESTION", "label": "❓ Вопросы", "count": intents_counter["QUESTION"], "color": "#3b82f6"},
+            {"intent": "OBJECTION", "label": "⚠️ Возражения", "count": intents_counter["OBJECTION"], "color": "#f59e0b"},
+            {"intent": "UNSUBSCRIBE", "label": "🚫 Отписки", "count": intents_counter["UNSUBSCRIBE"], "color": "#ef4444"},
+            {"intent": "OUT_OF_OFFICE", "label": "🏖 Автоответ", "count": intents_counter["OUT_OF_OFFICE"], "color": "#8b5cf6"},
+            {"intent": "NEUTRAL", "label": "⚪ Прочее", "count": intents_counter["NEUTRAL"], "color": "#64748b"},
+        ]
+
         return {
             "overall": overall,
             "funnels": funnels_list,
-            "touches": touches_list
+            "touches": touches_list,
+            "by_product": by_product,
+            "by_audience": by_audience,
+            "intents": intents_list
         }
     except Exception as err:
         print(f"Error in get_analytics: {err}")
         return {
-            "overall": {"sent": 0, "opened": 0, "clicked": 0, "replied": 0},
+            "overall": {"sent": 0, "opened": 0, "clicked": 0, "replied": 0, "interested": 0, "open_rate": 0, "click_rate": 0, "reply_rate": 0, "hot_rate": 0},
             "funnels": [],
-            "touches": []
+            "touches": [],
+            "by_product": [],
+            "by_audience": [],
+            "intents": []
         }
 
 
@@ -550,4 +711,438 @@ async def trigger_process_queue():
     from app.workers.outreach_tasks import process_outreach_queue_async
     asyncio.create_task(process_outreach_queue_async())
     return {"status": "success", "message": "Queue processing triggered."}
+
+
+# =========================================================================
+# STAGE 4: MULTI-CAMPAIGN LAUNCH, REVIEW QUEUE & INBOUND INBOX
+# =========================================================================
+
+class LaunchMultiCampaignRequest(BaseModel):
+    project_id: str
+    product_id: Optional[str] = None
+    audience_id: str
+    funnel_sequence_id: Optional[str] = None
+    steps: Optional[List[dict]] = None
+    campaign_name: str
+    is_manual_review_required: bool = False
+    schedule_config: Optional[dict] = {
+        "daily_limit": 50,
+        "send_start_hour": 9,
+        "send_end_hour": 18,
+        "workdays_only": True,
+        "delay_between_emails_sec": 120
+    }
+    filters: Optional[dict] = {}
+
+class ReviewApproveRequest(BaseModel):
+    sequence_ids: Optional[List[str]] = None
+    approve_all: bool = False
+    campaign_id: Optional[str] = None
+
+class ReviewRejectRequest(BaseModel):
+    sequence_ids: List[str]
+
+class ReviewUpdateRequest(BaseModel):
+    email_subject: str
+    email_content: str
+
+class SimulateReplyRequest(BaseModel):
+    lead_id: str
+    message_body: str
+    subject: Optional[str] = None
+
+class SendResponseRequest(BaseModel):
+    response_body: str
+    subject: Optional[str] = None
+
+@router.post("/launch-multi-campaign")
+async def launch_multi_campaign(
+    body: LaunchMultiCampaignRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Launches an independent multi-touch campaign linking Project + Product + Audience + Funnel.
+    Creates Touch 1 personalized drafts or immediately queues for automated sending.
+    """
+    proj_uuid = uuid.UUID(body.project_id)
+    aud_uuid = uuid.UUID(body.audience_id)
+    prod_uuid = uuid.UUID(body.product_id) if body.product_id else None
+
+    # 1. Fetch Funnel Steps
+    steps = body.steps or []
+    if not steps and body.funnel_sequence_id:
+        f_seq = (await db.execute(select(FunnelSequence).where(FunnelSequence.id == uuid.UUID(body.funnel_sequence_id)))).scalars().first()
+        if f_seq:
+            steps = f_seq.steps
+
+    if not steps:
+        raise HTTPException(status_code=400, detail="No funnel sequence steps provided for campaign")
+
+    # 2. Create OutreachCampaign record
+    campaign = OutreachCampaign(
+        project_id=proj_uuid,
+        product_id=prod_uuid,
+        audience_id=aud_uuid,
+        name=body.campaign_name,
+        filters=body.filters or {},
+        schedule_config=body.schedule_config or {},
+        is_manual_review_required=body.is_manual_review_required,
+        status=OutreachStatus.ACTIVE
+    )
+    db.add(campaign)
+    await db.commit()
+    await db.refresh(campaign)
+
+    # 3. Select Target Leads from Audience (with email & not unsubscribed)
+    leads_stmt = select(Lead).where(
+        Lead.audience_id == aud_uuid,
+        Lead.is_unsubscribed == False
+    )
+    res = await db.execute(leads_stmt)
+    leads = res.scalars().all()
+
+    first_step = steps[0]
+    subject_tpl = first_step.get("subject_template", "Предложение для {{company_name}}")
+    body_tpl = first_step.get("body_template", "")
+
+    initial_status = EmailSequenceStatus.DRAFT if body.is_manual_review_required else EmailSequenceStatus.QUEUED
+    queued_count = 0
+
+    for lead in leads:
+        lead_dict = {
+            "company_name": lead.company_name,
+            "city": lead.city,
+            "address": lead.address,
+            "website": lead.website,
+            "business_type": lead.business_type,
+            "custom_data": lead.custom_data or {}
+        }
+        rendered = AIFunnelService.render_preview(subject_tpl, body_tpl, lead_dict)
+
+        seq = EmailSequence(
+            lead_id=lead.id,
+            campaign_id=campaign.id,
+            current_touch=1,
+            status=initial_status,
+            email_subject=rendered["rendered_subject"],
+            email_content=rendered["rendered_body"]
+        )
+        db.add(seq)
+        queued_count += 1
+
+    await db.commit()
+
+    return {
+        "status": "success",
+        "campaign_id": str(campaign.id),
+        "campaign_name": campaign.name,
+        "total_leads_targeted": queued_count,
+        "initial_status": initial_status.value,
+        "is_review_required": body.is_manual_review_required
+    }
+
+@router.get("/review-queue")
+async def get_review_queue(
+    project_id: Optional[str] = None,
+    campaign_id: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns pending email drafts waiting for human operator approval before dispatch.
+    """
+    from sqlalchemy.orm import selectinload
+    stmt = (
+        select(EmailSequence)
+        .options(selectinload(EmailSequence.lead).selectinload(Lead.contacts))
+        .where(EmailSequence.status == EmailSequenceStatus.DRAFT)
+    )
+
+    if campaign_id:
+        stmt = stmt.where(EmailSequence.campaign_id == uuid.UUID(campaign_id))
+    if project_id:
+        stmt = stmt.join(Lead).where(Lead.project_id == uuid.UUID(project_id))
+
+    # Total count
+    count_stmt = select(func.count(EmailSequence.id)).where(EmailSequence.status == EmailSequenceStatus.DRAFT)
+    if campaign_id:
+        count_stmt = count_stmt.where(EmailSequence.campaign_id == uuid.UUID(campaign_id))
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    stmt = stmt.order_by(EmailSequence.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    drafts = (await db.execute(stmt)).scalars().all()
+
+    items = []
+    for d in drafts:
+        lead = d.lead
+        primary_email = ""
+        if lead and lead.contacts:
+            for c in lead.contacts:
+                if c.contact_type.lower() == "email":
+                    primary_email = c.contact_value
+                    break
+
+        items.append({
+            "id": str(d.id),
+            "lead_id": str(d.lead_id),
+            "campaign_id": str(d.campaign_id) if d.campaign_id else None,
+            "company_name": lead.company_name if lead else "Unknown",
+            "city": lead.city if lead else "",
+            "website": lead.website if lead else "",
+            "recipient_email": primary_email,
+            "current_touch": d.current_touch,
+            "email_subject": d.email_subject,
+            "email_content": d.email_content,
+            "created_at": d.created_at
+        })
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": items
+    }
+
+@router.post("/review-queue/approve")
+async def approve_review_drafts(
+    body: ReviewApproveRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Approves drafted emails and moves them to QUEUED for dispatch.
+    """
+    if body.approve_all:
+        stmt = update(EmailSequence).where(EmailSequence.status == EmailSequenceStatus.DRAFT)
+        if body.campaign_id:
+            stmt = stmt.where(EmailSequence.campaign_id == uuid.UUID(body.campaign_id))
+        stmt = stmt.values(status=EmailSequenceStatus.QUEUED)
+        await db.execute(stmt)
+    elif body.sequence_ids:
+        uuids = [uuid.UUID(i) for i in body.sequence_ids]
+        stmt = update(EmailSequence).where(EmailSequence.id.in_(uuids)).values(status=EmailSequenceStatus.QUEUED)
+        await db.execute(stmt)
+
+    await db.commit()
+    return {"status": "success", "message": "Drafts approved and moved to delivery queue."}
+
+@router.post("/review-queue/reject")
+async def reject_review_drafts(
+    body: ReviewRejectRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Rejects or skips drafts from sending.
+    """
+    uuids = [uuid.UUID(i) for i in body.sequence_ids]
+    stmt = update(EmailSequence).where(EmailSequence.id.in_(uuids)).values(status=EmailSequenceStatus.COMPLETED)
+    await db.execute(stmt)
+    await db.commit()
+    return {"status": "success", "message": "Selected drafts cancelled/skipped."}
+
+@router.put("/review-queue/{sequence_id}")
+async def update_review_draft(
+    sequence_id: str,
+    body: ReviewUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Allows human operator to edit email subject or content inline before approving.
+    """
+    stmt = select(EmailSequence).where(EmailSequence.id == uuid.UUID(sequence_id))
+    seq = (await db.execute(stmt)).scalars().first()
+    if not seq:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    seq.email_subject = body.email_subject
+    seq.email_content = body.email_content
+    await db.commit()
+    await db.refresh(seq)
+
+    return {"status": "success", "message": "Draft updated successfully"}
+
+# --- INBOUND REPLIES & SMART INBOX ---
+
+@router.get("/inbox")
+async def list_inbound_replies(
+    project_id: Optional[str] = None,
+    intent: Optional[str] = None,
+    is_handled: Optional[bool] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    List all inbound replies classified by AI.
+    """
+    stmt = select(InboundReply)
+    if project_id:
+        stmt = stmt.where(InboundReply.project_id == uuid.UUID(project_id))
+    if intent:
+        stmt = stmt.where(InboundReply.intent == intent)
+    if is_handled is not None:
+        stmt = stmt.where(InboundReply.is_handled == is_handled)
+
+    stmt = stmt.order_by(InboundReply.created_at.desc())
+    res = await db.execute(stmt)
+    replies = res.scalars().all()
+
+    items = []
+    for r in replies:
+        lead = r.lead
+        items.append({
+            "id": str(r.id),
+            "project_id": str(r.project_id),
+            "lead_id": str(r.lead_id),
+            "company_name": lead.company_name if lead else "Unknown",
+            "city": lead.city if lead else "",
+            "from_email": r.from_email,
+            "subject": r.subject,
+            "message_body": r.message_body,
+            "intent": r.intent.value if hasattr(r.intent, "value") else str(r.intent),
+            "ai_analysis": r.ai_analysis,
+            "ai_draft_response": r.ai_draft_response,
+            "is_handled": r.is_handled,
+            "handled_at": r.handled_at,
+            "created_at": r.created_at
+        })
+
+    return items
+
+@router.post("/inbox/simulate-reply")
+async def simulate_inbound_reply(
+    body: SimulateReplyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Simulates or registers an inbound prospect email reply.
+    Automatically triggers AI intent analysis, handles unsubscriptions or hot lead transitions,
+    and drafts an optimal AI response based on the active product knowledge base.
+    """
+    lead_uuid = uuid.UUID(body.lead_id)
+    lead = (await db.execute(select(Lead).where(Lead.id == lead_uuid))).scalars().first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Fetch product info from project or default
+    product_dict = {"name": "Revo B2B Services", "value_props": ["Рост потока клиентов на 30%"], "target_action_cta": "согласовать короткий 15-мин звонок"}
+    if lead.project_id:
+        prod = (await db.execute(select(Product).where(Product.project_id == lead.project_id))).scalars().first()
+        if prod:
+            product_dict = {
+                "name": prod.name,
+                "description": prod.description,
+                "value_props": prod.value_props or [],
+                "pain_points": prod.pain_points or [],
+                "target_action_cta": prod.target_action_cta or "согласовать звонок"
+            }
+
+    lead_dict = {
+        "company_name": lead.company_name,
+        "city": lead.city,
+        "business_type": lead.business_type,
+        "website": lead.website
+    }
+
+    # AI Classifier & Draft generator
+    classification = await AIInboxService.classify_and_draft(
+        inbound_message=body.message_body,
+        lead_info=lead_dict,
+        product_info=product_dict
+    )
+
+    intent_str = classification.get("intent", "NEUTRAL")
+    try:
+        reply_intent = ReplyIntent(intent_str)
+    except Exception:
+        reply_intent = ReplyIntent.NEUTRAL
+
+    # Find primary email for lead
+    recipient_email = "lead@example.com"
+    if lead.contacts:
+        for c in lead.contacts:
+            if c.contact_type.lower() == "email":
+                recipient_email = c.contact_value
+                break
+
+    # Automated Workflow Rules:
+    if reply_intent == ReplyIntent.UNSUBSCRIBE:
+        lead.is_unsubscribed = True
+        # Cancel any active sequences
+        await db.execute(
+            update(EmailSequence)
+            .where(EmailSequence.lead_id == lead.id)
+            .values(status=EmailSequenceStatus.UNSUBSCRIBED)
+        )
+    elif reply_intent == ReplyIntent.INTERESTED:
+        # Hot Lead! Stop follow-ups and advance status
+        await db.execute(
+            update(EmailSequence)
+            .where(EmailSequence.lead_id == lead.id)
+            .values(status=EmailSequenceStatus.REPLIED, promo_status=PromoTrackStatus.CODE_SENT)
+        )
+
+    # Save InboundReply record
+    new_reply = InboundReply(
+        project_id=lead.project_id or uuid.uuid4(),
+        lead_id=lead.id,
+        from_email=recipient_email,
+        subject=body.subject or f"Re: {lead.company_name}",
+        message_body=body.message_body,
+        intent=reply_intent,
+        ai_analysis=classification.get("ai_analysis"),
+        ai_draft_response=classification.get("ai_draft_response")
+    )
+    db.add(new_reply)
+    await db.commit()
+    await db.refresh(new_reply)
+
+    return {
+        "status": "success",
+        "reply_id": str(new_reply.id),
+        "intent": reply_intent.value,
+        "ai_analysis": new_reply.ai_analysis,
+        "ai_draft_response": new_reply.ai_draft_response
+    }
+
+@router.post("/inbox/{reply_id}/send-response")
+async def send_inbox_response(
+    reply_id: str,
+    body: SendResponseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sends the approved human/AI response to the lead via email and marks handled.
+    """
+    stmt = select(InboundReply).where(InboundReply.id == uuid.UUID(reply_id))
+    reply = (await db.execute(stmt)).scalars().first()
+    if not reply:
+        raise HTTPException(status_code=404, detail="Reply record not found")
+
+    # Send email via Resend if key exists
+    resend_key = os.getenv("RESEND_API_KEY")
+    if resend_key:
+        try:
+            resend.api_key = resend_key
+            resend.Emails.send({
+                "from": os.getenv("SENDER_EMAIL", "sher@banzaimarketing.tech"),
+                "to": reply.from_email,
+                "subject": body.subject or f"Re: {reply.subject or 'Ответ'}",
+                "text": body.response_body
+            })
+        except Exception as e:
+            logger.warning(f"Resend dispatch warning: {e}")
+
+    reply.is_handled = True
+    reply.handled_at = func.now()
+    await db.commit()
+
+    return {"status": "success", "message": f"Response sent to {reply.from_email}"}
+
 

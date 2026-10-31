@@ -94,7 +94,9 @@ class LeadMergerService:
     async def merge_or_create_lead(
         self,
         raw_lead: dict,
-        campaign_id: Optional[str] = None
+        campaign_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        audience_id: Optional[str] = None
     ) -> Tuple[Lead, bool]:
         """
         Returns (lead_instance, is_new_created).
@@ -114,6 +116,11 @@ class LeadMergerService:
         )
 
         if existing_lead:
+            # If existing lead is missing audience_id or project_id, populate it
+            if not existing_lead.project_id and project_id:
+                existing_lead.project_id = project_id
+            if not existing_lead.audience_id and audience_id:
+                existing_lead.audience_id = audience_id
             # Merge fields if existing lead has empty values
             if not existing_lead.website and website:
                 existing_lead.website = website
@@ -144,6 +151,8 @@ class LeadMergerService:
                 reviews_count=raw_lead.get("reviews_count", 0),
                 revo_score=raw_lead.get("revo_score", 100),
                 campaign_id=campaign_id,
+                project_id=project_id,
+                audience_id=audience_id,
                 custom_data=raw_lead.get("custom_data", {})
             )
             self.db.add(new_lead)

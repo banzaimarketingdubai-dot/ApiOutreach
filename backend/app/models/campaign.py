@@ -1,7 +1,8 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
 
@@ -17,6 +18,9 @@ class Campaign(Base):
     __tablename__ = "campaigns"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
+    audience_id = Column(UUID(as_uuid=True), ForeignKey("audiences.id", ondelete="SET NULL"), nullable=True, index=True)
+
     campaign_name = Column(String, index=True, nullable=False)
     status = Column(SQLEnum(CampaignStatus, native_enum=False), default=CampaignStatus.PENDING, nullable=False)
     target_geo = Column(String, nullable=True)
@@ -27,3 +31,6 @@ class Campaign(Base):
     error_log = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Optional relationship
+    leads = relationship("Lead", backref="scraper_campaign", lazy="selectin")
