@@ -14,67 +14,94 @@ from app.services.entity_resolution import LeadMergerService
 router = APIRouter()
 
 @router.get("/stats")
-async def get_leads_stats(db: AsyncSession = Depends(get_db)):
-    # Simple count of leads having specific contacts
+async def get_leads_stats(
+    project_id: Optional[UUID] = Query(None),
+    audience_id: Optional[UUID] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Returns aggregated contact statistics.
+    If project_id or audience_id is provided, scopes the counts strictly to that project/audience.
+    """
+    base_conditions = []
+    if project_id:
+        base_conditions.append(Lead.project_id == project_id)
+    if audience_id:
+        base_conditions.append(Lead.audience_id == audience_id)
+
+    def with_base(cond=None):
+        if not base_conditions:
+            return cond
+        if cond is not None:
+            return and_(*base_conditions, cond)
+        return and_(*base_conditions)
+
     # Total
-    total = await db.execute(select(func.count(Lead.id)))
+    total_stmt = select(func.count(Lead.id))
+    if base_conditions:
+        total_stmt = total_stmt.where(with_base())
+    total = await db.execute(total_stmt)
     total_val = total.scalar_one()
 
     # WhatsApps
-    wa = await db.execute(select(func.count(Lead.id)).where(
-        or_(
-            Lead.contacts.any(Contact.contact_type == "whatsapp"),
-            Lead.custom_data['whatsapp_available'].astext == 'true'
-        )
-    ))
+    wa_cond = or_(
+        Lead.contacts.any(Contact.contact_type == "whatsapp"),
+        Lead.custom_data['whatsapp_available'].astext == 'true'
+    )
+    wa_stmt = select(func.count(Lead.id)).where(with_base(wa_cond) if base_conditions else wa_cond)
+    wa = await db.execute(wa_stmt)
     wa_val = wa.scalar_one()
 
     # Telegrams
-    tg = await db.execute(select(func.count(Lead.id)).where(
-        or_(
-            Lead.contacts.any(Contact.contact_type == "telegram"),
-            Lead.custom_data['telegram_available'].astext == 'true'
-        )
-    ))
+    tg_cond = or_(
+        Lead.contacts.any(Contact.contact_type == "telegram"),
+        Lead.custom_data['telegram_available'].astext == 'true'
+    )
+    tg_stmt = select(func.count(Lead.id)).where(with_base(tg_cond) if base_conditions else tg_cond)
+    tg = await db.execute(tg_stmt)
     tg_val = tg.scalar_one()
 
     # Vibers
-    vb = await db.execute(select(func.count(Lead.id)).where(
-        or_(
-            Lead.contacts.any(Contact.contact_type == "viber"),
-            Lead.custom_data['viber_available'].astext == 'true'
-        )
-    ))
+    vb_cond = or_(
+        Lead.contacts.any(Contact.contact_type == "viber"),
+        Lead.custom_data['viber_available'].astext == 'true'
+    )
+    vb_stmt = select(func.count(Lead.id)).where(with_base(vb_cond) if base_conditions else vb_cond)
+    vb = await db.execute(vb_stmt)
     vb_val = vb.scalar_one()
 
     # Emails
-    emails = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "email")))
+    email_cond = Lead.contacts.any(Contact.contact_type == "email")
+    email_stmt = select(func.count(Lead.id)).where(with_base(email_cond) if base_conditions else email_cond)
+    emails = await db.execute(email_stmt)
     email_val = emails.scalar_one()
     
     # Phones
-    phones = await db.execute(select(func.count(Lead.id)).where(Lead.contacts.any(Contact.contact_type == "phone")))
+    phone_cond = Lead.contacts.any(Contact.contact_type == "phone")
+    phone_stmt = select(func.count(Lead.id)).where(with_base(phone_cond) if base_conditions else phone_cond)
+    phones = await db.execute(phone_stmt)
     phone_val = phones.scalar_one()
 
     # Websites
-    websites = await db.execute(select(func.count(Lead.id)).where(Lead.website != None))
+    website_cond = Lead.website != None
+    website_stmt = select(func.count(Lead.id)).where(with_base(website_cond) if base_conditions else website_cond)
+    websites = await db.execute(website_stmt)
     website_val = websites.scalar_one()
 
     # Enrichment Stats
-    from sqlalchemy import cast, String
-    # Look into JSONB custom_data field
-    enrich_prog = await db.execute(select(func.count(Lead.id)).where(
-        Lead.custom_data['enrichment_status'].astext == 'in_progress'
-    ))
+    enrich_prog_cond = Lead.custom_data['enrichment_status'].astext == 'in_progress'
+    enrich_prog_stmt = select(func.count(Lead.id)).where(with_base(enrich_prog_cond) if base_conditions else enrich_prog_cond)
+    enrich_prog = await db.execute(enrich_prog_stmt)
     enrich_prog_val = enrich_prog.scalar_one()
 
-    enrich_comp = await db.execute(select(func.count(Lead.id)).where(
-        Lead.custom_data['enrichment_status'].astext == 'completed'
-    ))
+    enrich_comp_cond = Lead.custom_data['enrichment_status'].astext == 'completed'
+    enrich_comp_stmt = select(func.count(Lead.id)).where(with_base(enrich_comp_cond) if base_conditions else enrich_comp_cond)
+    enrich_comp = await db.execute(enrich_comp_stmt)
     enrich_comp_val = enrich_comp.scalar_one()
 
-    enrich_fail = await db.execute(select(func.count(Lead.id)).where(
-        Lead.custom_data['enrichment_status'].astext == 'failed'
-    ))
+    enrich_fail_cond = Lead.custom_data['enrichment_status'].astext == 'failed'
+    enrich_fail_stmt = select(func.count(Lead.id)).where(with_base(enrich_fail_cond) if base_conditions else enrich_fail_cond)
+    enrich_fail = await db.execute(enrich_fail_stmt)
     enrich_fail_val = enrich_fail.scalar_one()
 
     return {
@@ -87,7 +114,9 @@ async def get_leads_stats(db: AsyncSession = Depends(get_db)):
         "website": website_val,
         "enrichment_in_progress": enrich_prog_val,
         "enrichment_completed": enrich_comp_val,
-        "enrichment_failed": enrich_fail_val
+        "enrichment_failed": enrich_fail_val,
+        "project_id": str(project_id) if project_id else None,
+        "audience_id": str(audience_id) if audience_id else None
     }
 
 def apply_lead_filters(stmt, filters_dict: dict = None):

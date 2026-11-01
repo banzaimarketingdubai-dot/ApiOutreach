@@ -141,10 +141,15 @@ export default function App() {
     }
   };
 
-  const loadStats = async () => {
+  const [isGlobalScope, setIsGlobalScope] = useState(false);
+
+  const loadStats = async (globalOverride) => {
     if (!user) return;
     try {
-      const data = await fetchStats();
+      const targetGlobal = globalOverride !== undefined ? globalOverride : isGlobalScope;
+      const targetProjId = targetGlobal ? null : (currentProjectId || null);
+      const targetAudId = targetGlobal ? null : (selectedAudienceId || null);
+      const data = await fetchStats(targetProjId, targetAudId);
       setStats(data || { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
     } catch (err) {
       handleApiError(err);
@@ -159,6 +164,7 @@ export default function App() {
 
   useEffect(() => {
     loadLeads();
+    loadStats();
 
     // Auto-refresh (polling) for real-time updates
     const intervalId = setInterval(() => {
@@ -170,7 +176,7 @@ export default function App() {
     }, 6000);
 
     return () => clearInterval(intervalId);
-  }, [filters, globalCampaignId, currentProjectId, selectedAudienceId, projects.length]);
+  }, [filters, globalCampaignId, currentProjectId, selectedAudienceId, projects.length, isGlobalScope]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -215,6 +221,12 @@ export default function App() {
           campaignsCount={campaigns.length}
           filters={filters}
           setFilters={setFilters}
+          currentProject={projects.find(p => p.id === currentProjectId) || projects[0]}
+          isGlobalScope={isGlobalScope}
+          setIsGlobalScope={(val) => {
+            setIsGlobalScope(val);
+            loadStats(val);
+          }}
         />
 
         {/* Tab Views */}

@@ -84,8 +84,12 @@ export async function exportLeadRadar(payload) {
   });
 }
 
-export async function fetchStats() {
-  return apiCall(`${API_BASE}/leads/stats`);
+export async function fetchStats(projectId = null, audienceId = null) {
+  const params = new URLSearchParams();
+  if (projectId) params.append('project_id', projectId);
+  if (audienceId) params.append('audience_id', audienceId);
+  const qs = params.toString();
+  return apiCall(`${API_BASE}/leads/stats${qs ? `?${qs}` : ''}`);
 }
 
 export async function generateAIStrategy(user_goal, geo, additional_notes) {

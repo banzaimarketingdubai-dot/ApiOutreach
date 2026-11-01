@@ -1,7 +1,14 @@
 import React from 'react';
 import { Database, MessageSquare, Mail, Phone, Globe, Sparkles, Send, PhoneCall } from 'lucide-react';
 
-export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0, enrichment_failed: 0 }, filters, setFilters }) {
+export default function StatsCards({ 
+  stats = { total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0, website: 0, enrichment_in_progress: 0, enrichment_completed: 0, enrichment_failed: 0 }, 
+  filters, 
+  setFilters,
+  currentProject,
+  isGlobalScope = false,
+  setIsGlobalScope
+}) {
   
   const toggleFilter = (key) => {
     // If it's already true, clear it, otherwise set it to true (and clear the other contact filters to avoid conflicting empty sets, though they could be ANDed)
@@ -25,12 +32,13 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 
   const inProg = stats.enrichment_in_progress || 0;
   const comp = stats.enrichment_completed || 0;
   const fail = stats.enrichment_failed || 0;
+  const projectName = currentProject?.name || 'Текущий воркспейс';
 
   const cards = [
     {
-      title: 'Total Master Data Leads',
+      title: isGlobalScope ? 'Total Master Data Leads' : 'Контакты в воркспейсе',
       value: stats.total || 0,
-      change: 'Global Database Size',
+      change: isGlobalScope ? 'Global Database Size' : `${projectName}`,
       icon: Database,
       color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20',
       activeColor: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-900/20',
@@ -52,7 +60,7 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 
     {
       title: 'Websites Collected',
       value: stats.website || 0,
-      change: 'Domains ready for AI enrichment',
+      change: isGlobalScope ? 'Domains ready for AI' : `Сайты в ${projectName}`,
       icon: Globe,
       color: 'from-cyan-500/20 to-cyan-600/5 text-cyan-400 border-cyan-500/20',
       activeColor: 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] bg-cyan-900/20',
@@ -118,31 +126,77 @@ export default function StatsCards({ stats = { total: 0, whatsapp: 0, telegram: 
   ];
 
   return (
-    <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory gap-4 mb-2 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      {cards.map((item, index) => {
-        const Icon = item.icon;
-        return (
-          <div
-            key={index}
-            onClick={item.onClick}
-            className={`flex-none w-[280px] md:w-auto snap-center p-4 rounded-2xl cursor-pointer bg-slate-900/60 border ${item.isActive ? item.activeColor : item.color} backdrop-blur-md relative overflow-hidden group hover:border-slate-500 transition-all`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-400">{item.title}</p>
-                <h3 className="text-2xl font-bold text-white mt-1 tracking-tight">{item.value}</h3>
-              </div>
-              <div className={`p-3 rounded-xl bg-slate-800/80 border border-slate-700/50`}>
-                <Icon className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2 flex items-center">
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${item.isActive ? 'bg-white' : 'bg-slate-600'}`}></span>
-              {item.change}
-            </p>
+    <div className="space-y-3">
+      {/* Scope Switcher & Header */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center space-x-2">
+          <span className="text-xs font-semibold text-slate-300">
+            {isGlobalScope ? 'Глобальная аналитика Revo' : `Аналитика воркспейса: ${projectName}`}
+          </span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+            isGlobalScope 
+              ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' 
+              : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+          }`}>
+            {isGlobalScope ? '🌐 Вся общая база' : '📁 Изолированный проект'}
+          </span>
+        </div>
+
+        {setIsGlobalScope && (
+          <div className="flex items-center bg-slate-900/80 border border-slate-700/80 rounded-xl p-0.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGlobalScope(false)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                !isGlobalScope 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Воркспейс ({projectName.slice(0, 16)})
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsGlobalScope(true)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                isGlobalScope 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Вся база Revo
+            </button>
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {/* Cards Grid */}
+      <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory gap-4 mb-2 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {cards.map((item, index) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={index}
+              onClick={item.onClick}
+              className={`flex-none w-[280px] md:w-auto snap-center p-4 rounded-2xl cursor-pointer bg-slate-900/60 border ${item.isActive ? item.activeColor : item.color} backdrop-blur-md relative overflow-hidden group hover:border-slate-500 transition-all`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">{item.title}</p>
+                  <h3 className="text-2xl font-bold text-white mt-1 tracking-tight">{item.value}</h3>
+                </div>
+                <div className={`p-3 rounded-xl bg-slate-800/80 border border-slate-700/50`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 flex items-center">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${item.isActive ? 'bg-white' : 'bg-slate-600'}`}></span>
+                {item.change}
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
