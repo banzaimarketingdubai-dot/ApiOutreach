@@ -409,6 +409,13 @@ export async function recalculateAudienceStats(audienceId) {
   });
 }
 
+export async function attachAudienceLeads(audienceId, filters = {}) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}/attach-leads`, {
+    method: 'POST',
+    body: JSON.stringify(filters)
+  });
+}
+
 // --- Products ---
 export async function fetchProducts(projectId) {
   const query = projectId ? `?project_id=${projectId}` : '';

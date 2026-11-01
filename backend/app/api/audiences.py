@@ -400,3 +400,61 @@ async def recalculate_audience_stats(
     resp = AudienceResponse.model_validate(aud)
     resp.leads_count = stats["total_leads"]
     return resp
+
+class AttachLeadsRequest(BaseModel):
+    lead_ids: Optional[List[uuid.UUID]] = None
+    city: Optional[str] = None
+    min_rating: Optional[float] = None
+    has_email: Optional[bool] = False
+    has_phone: Optional[bool] = False
+    limit: Optional[int] = 100
+
+@router.post("/{audience_id}/attach-leads")
+async def attach_leads_to_audience(
+    audience_id: uuid.UUID,
+    body: AttachLeadsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Audience).where(Audience.id == audience_id)
+    aud = (await db.execute(stmt)).scalars().first()
+    if not aud:
+        raise HTTPException(status_code=404, detail="Audience not found")
+
+    from app.models.contact import Contact, ChannelType
+    
+    if body.lead_ids:
+        lead_stmt = select(Lead).where(Lead.id.in_(body.lead_ids))
+    else:
+        lead_stmt = select(Lead)
+        if body.city:
+            lead_stmt = lead_stmt.where(Lead.city.ilike(f"%{body.city}%"))
+        if body.min_rating:
+            lead_stmt = lead_stmt.where(Lead.rating >= body.min_rating)
+        if body.has_email:
+            lead_stmt = lead_stmt.join(Contact, Lead.id == Contact.lead_id).where(Contact.channel == ChannelType.EMAIL, Contact.is_valid == True)
+        if body.has_phone:
+            lead_stmt = lead_stmt.join(Contact, Lead.id == Contact.lead_id).where(Contact.channel.in_([ChannelType.PHONE, ChannelType.WHATSAPP]), Contact.is_valid == True)
+        lead_stmt = lead_stmt.limit(body.limit or 100)
+
+    res = await db.execute(lead_stmt)
+    leads_to_attach = res.scalars().unique().all()
+
+    attached_count = 0
+    for l in leads_to_attach:
+        l.audience_id = aud.id
+        l.project_id = aud.project_id
+        attached_count += 1
+
+    await db.commit()
+    stats = await compute_audience_stats(db, aud.id)
+    aud.stats = stats
+    await db.commit()
+
+    return {
+        "status": "success",
+        "attached_count": attached_count,
+        "audience_id": str(aud.id),
+        "total_leads": stats.get("total_leads", 0)
+    }
+
