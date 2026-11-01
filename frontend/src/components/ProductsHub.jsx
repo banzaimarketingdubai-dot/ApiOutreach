@@ -6,18 +6,24 @@ import {
 import { fetchProducts, deleteProduct } from '../services/api';
 import CreateProductModal from './CreateProductModal';
 
-export default function ProductsHub({ currentProjectId, onLaunchFunnelStudio }) {
+export default function ProductsHub({ 
+  currentProjectId, 
+  projects = [], 
+  onLaunchFunnelStudio 
+}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [actionNotice, setActionNotice] = useState(null);
 
+  const effectiveProjectId = currentProjectId || (projects.length > 0 ? (projects.find(p => p.is_default)?.id || projects[0].id) : null);
+
   const loadProducts = async () => {
-    if (!currentProjectId) return;
+    if (!effectiveProjectId) return;
     setLoading(true);
     try {
-      const data = await fetchProducts(currentProjectId);
+      const data = await fetchProducts(effectiveProjectId);
       setProducts(data || []);
     } catch (err) {
       console.error('Failed to load products:', err);
@@ -28,7 +34,7 @@ export default function ProductsHub({ currentProjectId, onLaunchFunnelStudio }) 
 
   useEffect(() => {
     loadProducts();
-  }, [currentProjectId]);
+  }, [effectiveProjectId]);
 
   const handleDelete = async (prod) => {
     if (!window.confirm(`Вы уверены, что хотите удалить продукт "${prod.name}"?`)) {
@@ -230,7 +236,8 @@ export default function ProductsHub({ currentProjectId, onLaunchFunnelStudio }) 
       <CreateProductModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingProduct(null); }}
-        projectId={currentProjectId}
+        projectId={effectiveProjectId}
+        projects={projects}
         productToEdit={editingProduct}
         onProductSaved={() => {
           loadProducts();

@@ -66,20 +66,31 @@ export default function App() {
     if (!user) return;
     try {
       const projs = await fetchProjects();
-      setProjects(projs || []);
-      if (projs && projs.length > 0) {
-        // If current project id is not in the list, set to default or first
-        const exists = projs.find(p => p.id === currentProjectId);
-        if (!exists) {
-          const defaultProj = projs.find(p => p.is_default) || projs[0];
-          setCurrentProjectId(defaultProj.id);
-          localStorage.setItem('current_project_id', defaultProj.id);
-        }
+      const list = projs || [];
+      setProjects(list);
+      if (list.length > 0) {
+        const currentSaved = localStorage.getItem('current_project_id');
+        const exists = list.find(p => p.id === currentSaved || p.id === currentProjectId);
+        const targetId = exists ? exists.id : ((list.find(p => p.is_default) || list[0]).id);
+        setCurrentProjectId(targetId);
+        localStorage.setItem('current_project_id', targetId);
       }
     } catch (err) {
       handleApiError(err);
     }
   };
+
+  // Ensure currentProjectId is synchronized with available projects
+  useEffect(() => {
+    if (projects.length > 0) {
+      const exists = projects.find(p => p.id === currentProjectId);
+      if (!exists) {
+        const defaultProj = projects.find(p => p.is_default) || projects[0];
+        setCurrentProjectId(defaultProj.id);
+        localStorage.setItem('current_project_id', defaultProj.id);
+      }
+    }
+  }, [projects, currentProjectId]);
 
   const handleProjectChange = (newProjId) => {
     setCurrentProjectId(newProjId);
@@ -190,6 +201,7 @@ export default function App() {
         {activeTab === 'audiences' && (
           <AudiencesHub
             currentProjectId={currentProjectId}
+            projects={projects}
             onViewLeadsInTable={(audId) => {
               setSelectedAudienceId(audId);
               setActiveTab('leads');
@@ -201,6 +213,7 @@ export default function App() {
         {activeTab === 'products' && (
           <ProductsHub
             currentProjectId={currentProjectId}
+            projects={projects}
             onLaunchFunnelStudio={(prodId) => {
               setActiveProductIdForFunnel(prodId);
               setActiveTab('funnel');

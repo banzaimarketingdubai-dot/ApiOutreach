@@ -52,7 +52,7 @@ export default function Header({
           <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2 py-1">
             <Briefcase className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
             <select
-              value={currentProjectId || ''}
+              value={currentProjectId || (projects[0]?.id || '')}
               onChange={(e) => setCurrentProjectId(e.target.value)}
               className="bg-transparent text-white font-semibold rounded text-xs py-0.5 focus:outline-none cursor-pointer w-28 sm:w-36 truncate"
               title="Выберите активный проект"

@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Package, X, Loader2, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Package, X, Loader2, AlertCircle, Plus, Trash2, Briefcase } from 'lucide-react';
 import { createProduct, updateProduct } from '../services/api';
 
-export default function CreateProductModal({ isOpen, onClose, projectId, productToEdit, onProductSaved }) {
+export default function CreateProductModal({ 
+  isOpen, 
+  onClose, 
+  projectId, 
+  projects = [], 
+  productToEdit, 
+  onProductSaved 
+}) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [targetAudienceIcp, setTargetAudienceIcp] = useState('');
@@ -10,8 +17,18 @@ export default function CreateProductModal({ isOpen, onClose, projectId, product
   const [valueProps, setValueProps] = useState(['']);
   const [targetActionCta, setTargetActionCta] = useState('Обсудить 15 минут в Zoom');
   const [pricingDetails, setPricingDetails] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (projectId) {
+      setSelectedProjectId(projectId);
+    } else if (projects.length > 0) {
+      const def = projects.find(p => p.is_default) || projects[0];
+      setSelectedProjectId(def.id);
+    }
+  }, [projectId, projects, isOpen]);
 
   useEffect(() => {
     if (productToEdit) {
@@ -58,7 +75,9 @@ export default function CreateProductModal({ isOpen, onClose, projectId, product
       setError('Введите название продукта / услуги');
       return;
     }
-    if (!projectId && !productToEdit) {
+
+    const effectiveProjectId = selectedProjectId || projectId || (projects.length > 0 ? (projects.find(p => p.is_default)?.id || projects[0].id) : null);
+    if (!effectiveProjectId && !productToEdit) {
       setError('Не выбран активный проект');
       return;
     }
@@ -81,7 +100,7 @@ export default function CreateProductModal({ isOpen, onClose, projectId, product
       if (productToEdit) {
         saved = await updateProduct(productToEdit.id, payload);
       } else {
-        saved = await createProduct({ ...payload, project_id: projectId });
+        saved = await createProduct({ ...payload, project_id: effectiveProjectId });
       }
       if (onProductSaved) {
         onProductSaved(saved);
@@ -121,6 +140,26 @@ export default function CreateProductModal({ isOpen, onClose, projectId, product
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+          {projects.length > 0 && !productToEdit && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-purple-400" />
+                <span>Проект / Воркспейс <span className="text-rose-400">*</span></span>
+              </label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.is_default ? '(Основной проект)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               Название продукта / оффера <span className="text-rose-400">*</span>

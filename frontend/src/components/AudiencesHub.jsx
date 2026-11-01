@@ -12,6 +12,7 @@ import AudienceImportModal from './AudienceImportModal';
 
 export default function AudiencesHub({ 
   currentProjectId, 
+  projects = [],
   onViewLeadsInTable, 
   onOpenScraper 
 }) {
@@ -22,11 +23,13 @@ export default function AudiencesHub({
   const [enrichingId, setEnrichingId] = useState(null);
   const [actionNotice, setActionNotice] = useState(null);
 
+  const effectiveProjectId = currentProjectId || (projects.length > 0 ? (projects.find(p => p.is_default)?.id || projects[0].id) : null);
+
   const loadAudiences = async () => {
-    if (!currentProjectId) return;
+    if (!effectiveProjectId) return;
     setLoading(true);
     try {
-      const data = await fetchAudiences(currentProjectId);
+      const data = await fetchAudiences(effectiveProjectId);
       setAudiences(data || []);
     } catch (err) {
       console.error('Failed to load audiences:', err);
@@ -37,7 +40,7 @@ export default function AudiencesHub({
 
   useEffect(() => {
     loadAudiences();
-  }, [currentProjectId]);
+  }, [effectiveProjectId]);
 
   const handleDelete = async (aud) => {
     if (!window.confirm(`Вы уверены, что хотите удалить аудиторию "${aud.name}"? Это также удалит связанные лиды этой аудитории.`)) {
@@ -328,7 +331,8 @@ export default function AudiencesHub({
       <CreateAudienceModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        projectId={currentProjectId}
+        projectId={effectiveProjectId}
+        projects={projects}
         onAudienceCreated={(newAud) => {
           setAudiences(prev => [newAud, ...prev]);
           showNotice(`Аудитория "${newAud.name}" успешно создана!`, 'success');
