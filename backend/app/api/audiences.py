@@ -459,3 +459,65 @@ async def attach_leads_to_audience(
         "total_leads": stats.get("total_leads", 0)
     }
 
+class ExportGoogleSheetsRequest(BaseModel):
+    spreadsheet_id: Optional[str] = None
+    custom_template: Optional[Dict[str, Any]] = None
+
+@router.post("/{audience_id}/export-google-sheets")
+async def export_audience_google_sheets(
+    audience_id: uuid.UUID,
+    body: Optional[ExportGoogleSheetsRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Exports all leads from the specified Audience into a dedicated Google Sheet tab.
+    Saves the spreadsheet live URL to audience stats.
+    """
+    stmt = select(Audience).where(Audience.id == audience_id)
+    audience = (await db.execute(stmt)).scalars().first()
+    if not audience:
+        raise HTTPException(status_code=404, detail="Audience not found")
+
+    # Fetch all leads in this audience with eager-loaded contacts
+    leads_stmt = select(Lead).where(Lead.audience_id == audience_id).order_by(Lead.created_at.desc())
+    res = await db.execute(leads_stmt)
+    leads = res.scalars().unique().all()
+
+    if not leads:
+        raise HTTPException(
+            status_code=400,
+            detail="В этой аудитории пока нет лидов для экспорта. Добавьте контакты через парсер или сегментацию базы."
+        )
+
+    from app.services.google_sheets_service import export_audience_leads_to_google_sheet
+
+    try:
+        spreadsheet_id = body.spreadsheet_id if body else None
+        custom_template = body.custom_template if body else None
+        
+        result = export_audience_leads_to_google_sheet(
+            audience_name=audience.name,
+            leads=leads,
+            spreadsheet_id=spreadsheet_id,
+            template_config=custom_template
+        )
+
+        # Update audience stats with google sheet url
+        current_stats = dict(audience.stats or {})
+        current_stats["google_sheet_url"] = result["sheet_url"]
+        current_stats["google_sheet_exported_at"] = result["exported_at"]
+        current_stats["google_sheet_leads_count"] = result["leads_exported"]
+        current_stats["google_sheet_title"] = result["sheet_title"]
+        audience.stats = current_stats
+
+        await db.commit()
+        await db.refresh(audience)
+
+        return result
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except Exception as e:
+        logger.error(f"Google Sheets export error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка экспорта в Google Sheets: {str(e)}")
+

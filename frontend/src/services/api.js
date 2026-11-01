@@ -363,7 +363,7 @@ export async function updateAudience(audienceId, data) {
 }
 
 export async function deleteAudience(audienceId) {
-  const res = await fetch(`${API_ROOT}${API_BASE}/audiences/${audienceId}`, {
+  const res = await fetch(`${API_BASE}/audiences/${audienceId}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -372,6 +372,16 @@ export async function deleteAudience(audienceId) {
     throw new Error(err.detail || 'Failed to delete audience');
   }
   return true;
+}
+
+export async function exportAudienceToGoogleSheets(audienceId, spreadsheetId = null, customTemplate = null) {
+  return apiCall(`${API_BASE}/audiences/${audienceId}/export-google-sheets`, {
+    method: 'POST',
+    body: JSON.stringify({
+      spreadsheet_id: spreadsheetId,
+      custom_template: customTemplate
+    })
+  });
 }
 
 export async function importAudienceRows(audienceId, rows) {
