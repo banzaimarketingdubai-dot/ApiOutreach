@@ -61,12 +61,23 @@ export default function App() {
   const handleApiError = (err) => {
     console.warn('Background data fetch notice:', err);
     if (err?.message?.includes('Signature has expired') || err?.message?.includes('Could not validate credentials')) {
-      console.warn('Expired auth token detected in background fetch. Clearing expired session.');
+      console.warn('Expired auth token detected. Clearing expired session.');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
     }
   };
+
+  useEffect(() => {
+    const onAuthExpired = () => {
+      console.warn('auth:expired event triggered. Resetting session.');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    };
+    window.addEventListener('auth:expired', onAuthExpired);
+    return () => window.removeEventListener('auth:expired', onAuthExpired);
+  }, []);
 
   const loadProjects = async () => {
     if (!user) return;

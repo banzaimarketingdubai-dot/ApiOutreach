@@ -25,6 +25,18 @@ async def list_projects(
     res = await db.execute(stmt)
     projects = res.scalars().all()
     
+    if not projects:
+        default_proj = Project(
+            name="GBPilot / Revo Workspace",
+            description="Default outreach workspace",
+            is_default=True,
+            settings={}
+        )
+        db.add(default_proj)
+        await db.commit()
+        await db.refresh(default_proj)
+        projects = [default_proj]
+    
     result = []
     for proj in projects:
         # Count products
