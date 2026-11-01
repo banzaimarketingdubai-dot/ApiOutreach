@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Inbox, Sparkles, Send, CheckCircle2, AlertCircle, RefreshCw, 
   MessageSquare, User, Building, Clock, Flame, HelpCircle, 
-  Slash, CornerDownLeft, Loader2, Play
+  Slash, CornerDownLeft, Loader2, Play, X
 } from 'lucide-react';
 import { fetchInboundReplies, sendInboxResponse, simulateInboundReply, fetchLeads } from '../services/api';
 
