@@ -138,10 +138,11 @@ export default function CreateAudienceModal({
       });
 
       // 2. Handle specific Source Pipeline
+      let createdCampaign = null;
       if (sourceType === 'PARSER') {
         // Automatically launch Celery scraping task with target audience & project
         const finalQueries = queriesList.length > 0 ? queriesList : queriesInput.split(',').map(s => s.trim()).filter(Boolean);
-        await createCampaign({
+        createdCampaign = await createCampaign({
           project_id: effectiveProjectId,
           audience_id: createdAudience.id,
           campaign_name: `Сбор карт: ${name.trim()}`,
@@ -177,7 +178,7 @@ export default function CreateAudienceModal({
       setAiReasoning('');
 
       if (onAudienceCreated) {
-        onAudienceCreated(createdAudience);
+        onAudienceCreated(createdAudience, createdCampaign);
       }
       onClose();
     } catch (err) {

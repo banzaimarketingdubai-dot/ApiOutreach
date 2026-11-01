@@ -46,10 +46,17 @@ async def create_campaign(
 
 @router.get("", response_model=List[CampaignResponse])
 async def list_campaigns(
+    project_id: Optional[UUID] = None,
+    audience_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Campaign).order_by(desc(Campaign.created_at))
+    stmt = select(Campaign)
+    if project_id:
+        stmt = stmt.where(Campaign.project_id == project_id)
+    if audience_id:
+        stmt = stmt.where(Campaign.audience_id == audience_id)
+    stmt = stmt.order_by(desc(Campaign.created_at))
     res = await db.execute(stmt)
     return res.scalars().all()
 

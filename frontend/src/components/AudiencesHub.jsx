@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Upload, Sparkles, Database, Mail, Phone, 
   Trash2, RefreshCw, CheckCircle2, AlertCircle, ArrowUpRight, 
-  Layers, Filter, FileText
+  Layers, Filter, FileText, Activity, Play
 } from 'lucide-react';
 import { 
-  fetchAudiences, deleteAudience, enrichAudience, recalculateAudienceStats 
+  fetchAudiences, deleteAudience, enrichAudience, recalculateAudienceStats, fetchCampaigns 
 } from '../services/api';
 import CreateAudienceModal from './CreateAudienceModal';
 import AudienceImportModal from './AudienceImportModal';
+import CampaignControlPanel from './CampaignControlPanel';
 
 export default function AudiencesHub({ 
   currentProjectId, 
@@ -17,6 +18,8 @@ export default function AudiencesHub({
   onOpenScraper 
 }) {
   const [audiences, setAudiences] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [liveCampaignId, setLiveCampaignId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedAudienceForImport, setSelectedAudienceForImport] = useState(null);
@@ -29,8 +32,12 @@ export default function AudiencesHub({
     if (!effectiveProjectId) return;
     setLoading(true);
     try {
-      const data = await fetchAudiences(effectiveProjectId);
+      const [data, camps] = await Promise.all([
+        fetchAudiences(effectiveProjectId),
+        fetchCampaigns().catch(() => [])
+      ]);
       setAudiences(data || []);
+      setCampaigns(camps || []);
     } catch (err) {
       console.error('Failed to load audiences:', err);
     } finally {
@@ -271,6 +278,31 @@ export default function AudiencesHub({
 
                 </div>
 
+                {/* Live Parser Progress Indicator if campaign is attached */}
+                {(() => {
+                  const audCamp = campaigns.find(c => c.audience_id === aud.id);
+                  if (!audCamp) return null;
+                  const isRunning = audCamp.status === 'RUNNING';
+                  return (
+                    <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 flex items-center justify-between text-xs animate-fade-in">
+                      <div className="flex items-center space-x-2 truncate">
+                        <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-blue-400 animate-ping' : audCamp.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                        <span className="text-[11px] font-medium text-slate-300 truncate">
+                          {isRunning ? 'Идет сбор контактов...' : 'Парсинг карт завершен'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setLiveCampaignId(audCamp.id)}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 flex items-center space-x-1 transition-all flex-shrink-0 cursor-pointer"
+                        title="Открыть живые логи и статус выполнения"
+                      >
+                        <Activity className="w-3 h-3 text-blue-400" />
+                        <span>Живой прогресс</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {/* Card Actions */}
                 <div className="pt-5 mt-5 border-t border-slate-800/80 space-y-2">
                   <div className="grid grid-cols-2 gap-2">
@@ -333,9 +365,15 @@ export default function AudiencesHub({
         onClose={() => setIsCreateModalOpen(false)}
         projectId={effectiveProjectId}
         projects={projects}
-        onAudienceCreated={(newAud) => {
+        onAudienceCreated={(newAud, newCamp) => {
           setAudiences(prev => [newAud, ...prev]);
-          showNotice(`Аудитория "${newAud.name}" успешно создана!`, 'success');
+          if (newCamp && newCamp.id) {
+            setLiveCampaignId(newCamp.id);
+            showNotice(`Аудитория "${newAud.name}" создана! Парсер запущен в фоне, открыт Live Execution Center.`, 'success');
+          } else {
+            showNotice(`Аудитория "${newAud.name}" успешно создана!`, 'success');
+          }
+          loadAudiences();
         }}
       />
 
@@ -350,6 +388,21 @@ export default function AudiencesHub({
           }
         }}
       />
+
+      {/* Live Campaign Execution Center Modal */}
+      {liveCampaignId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl shadow-2xl">
+            <CampaignControlPanel
+              campaignId={liveCampaignId}
+              onClose={() => {
+                setLiveCampaignId(null);
+                loadAudiences();
+              }}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );
