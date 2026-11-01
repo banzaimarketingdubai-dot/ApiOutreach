@@ -41,7 +41,12 @@ export default function CreateProjectModal({ isOpen, onClose, onProjectCreated }
       }
       onClose();
     } catch (err) {
-      setError(err.message || 'Ошибка создания проекта');
+      const msg = err.message || '';
+      if (msg.includes('Signature has expired') || msg.includes('Could not validate credentials')) {
+        setError('Срок действия сессии истек. Пожалуйста, перезайдите в аккаунт через кнопку выхода в правом верхнем углу.');
+      } else {
+        setError(msg || 'Ошибка создания проекта');
+      }
     } finally {
       setLoading(false);
     }

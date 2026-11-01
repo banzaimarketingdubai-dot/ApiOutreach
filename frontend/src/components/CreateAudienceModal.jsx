@@ -57,7 +57,12 @@ export default function CreateAudienceModal({
       }
       onClose();
     } catch (err) {
-      setError(err.message || 'Ошибка создания аудитории');
+      const msg = err.message || '';
+      if (msg.includes('Signature has expired') || msg.includes('Could not validate credentials')) {
+        setError('Срок действия сессии истек. Пожалуйста, перезайдите в аккаунт через кнопку выхода в правом верхнем углу.');
+      } else {
+        setError(msg || 'Ошибка создания аудитории');
+      }
     } finally {
       setLoading(false);
     }

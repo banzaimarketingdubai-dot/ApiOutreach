@@ -25,6 +25,13 @@ export async function apiCall(endpoint, options = {}) {
       const errData = await res.json();
       errorDetail = errData.detail || errorDetail;
     } catch (e) {}
+
+    if (res.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:expired', { detail: errorDetail }));
+      }
+    }
+
     throw new Error(`API call failed: ${errorDetail}`);
   }
   return res.json();
