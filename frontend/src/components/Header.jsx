@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, 
   Send, Target, BarChart2, Shield, Users, Briefcase, Plus,
-  Package, ShieldCheck, Inbox
+  Package, ShieldCheck, Inbox, ChevronDown, Check, Loader2
 } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
@@ -21,12 +21,27 @@ export default function Header({
   onOpenCreateProject
 }) {
   const [apifyData, setApifyData] = useState(null);
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     fetchApifyBalance()
       .then((data) => setApifyData(data))
       .catch((err) => console.error('Apify balance fetch error:', err));
   }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProjectDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const currentProject = projects.find(p => p.id === currentProjectId) || projects[0];
 
   return (
     <header className="border-b border-slate-800 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-40">
@@ -48,34 +63,96 @@ export default function Header({
           
           <div className="hidden md:block h-6 w-px bg-slate-800"></div>
 
-          {/* Project Workspace Dropdown */}
-          <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2 py-1">
-            <Briefcase className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-            <select
-              value={currentProjectId || (projects[0]?.id || '')}
-              onChange={(e) => setCurrentProjectId(e.target.value)}
-              className="bg-transparent text-white font-semibold rounded text-xs py-0.5 focus:outline-none cursor-pointer w-28 sm:w-36 truncate"
-              title="Выберите активный проект"
-            >
-              {projects.map(p => (
-                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-100">
-                  {p.name}
-                </option>
-              ))}
-              {projects.length === 0 && (
-                <option value="" disabled className="bg-slate-900 text-slate-400">
-                  Загрузка...
-                </option>
-              )}
-            </select>
-            {onOpenCreateProject && (
+          {/* Custom Project Workspace Dropdown with High Contrast */}
+          <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700/80 hover:border-slate-600 rounded-xl px-2 py-1 transition-all shadow-md">
               <button
-                onClick={onOpenCreateProject}
-                title="Создать новый проект"
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                type="button"
+                onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                className="flex items-center space-x-1.5 text-left focus:outline-none cursor-pointer py-0.5"
+                title="Переключить проект"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Briefcase className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                <span className="text-xs font-bold text-white max-w-[110px] sm:max-w-[150px] truncate">
+                  {currentProject ? currentProject.name : (projects.length === 0 ? 'Загрузка...' : 'Выберите проект')}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isProjectDropdownOpen ? 'rotate-180 text-white' : ''}`} />
               </button>
+
+              {onOpenCreateProject && (
+                <button
+                  type="button"
+                  onClick={onOpenCreateProject}
+                  title="Создать новый проект"
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors ml-0.5 border-l border-slate-800 pl-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5 text-indigo-300" />
+                </button>
+              )}
+            </div>
+
+            {/* Custom High-Contrast Dropdown Menu */}
+            {isProjectDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 p-2 space-y-1 backdrop-blur-xl animate-fade-in">
+                <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-1 flex items-center justify-between">
+                  <span>Проекты (Воркспейсы)</span>
+                  <span className="text-slate-500 font-mono">{projects.length}</span>
+                </div>
+
+                {projects.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-xs text-slate-300 flex items-center justify-center space-x-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <span>Загрузка проектов...</span>
+                  </div>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {projects.map(p => {
+                      const isSelected = p.id === (currentProject?.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setCurrentProjectId(p.id);
+                            setIsProjectDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                              : 'text-slate-100 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 truncate">
+                            <span className="truncate">{p.name}</span>
+                            {p.is_default && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
+                                Основной
+                              </span>
+                            )}
+                          </div>
+                          {isSelected && <Check className="w-4 h-4 text-white flex-shrink-0 ml-2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {onOpenCreateProject && (
+                  <div className="pt-1.5 border-t border-slate-800 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProjectDropdownOpen(false);
+                        onOpenCreateProject();
+                      }}
+                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-300 hover:bg-indigo-500/10 hover:text-indigo-200 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Создать новый проект</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

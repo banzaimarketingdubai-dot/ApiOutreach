@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
+select, option, input, textarea {
+  color-scheme: dark;
+}
+
+option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
 @layer base {
   body {
     font-family: 'Inter', sans-serif;

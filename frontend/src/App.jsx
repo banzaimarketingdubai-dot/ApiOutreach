@@ -147,10 +147,13 @@ export default function App() {
     const intervalId = setInterval(() => {
       loadLeads();
       loadStats();
+      if (projects.length === 0) {
+        loadProjects();
+      }
     }, 6000);
 
     return () => clearInterval(intervalId);
-  }, [filters, globalCampaignId, currentProjectId, selectedAudienceId]);
+  }, [filters, globalCampaignId, currentProjectId, selectedAudienceId, projects.length]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
