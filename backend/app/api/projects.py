@@ -180,6 +180,9 @@ async def delete_project(
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if proj.is_default:
+        raise HTTPException(status_code=400, detail="Нельзя удалить основной воркспейс по умолчанию")
+
     await db.delete(proj)
     await db.commit()
     return None

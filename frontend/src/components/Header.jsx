@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Sparkles, Database, Layers, Wallet, CheckCircle2, GitMerge, 
   Send, Target, BarChart2, Shield, Users, Briefcase, Plus,
-  Package, ShieldCheck, Inbox, ChevronDown, Check, Loader2
+  Package, ShieldCheck, Inbox, ChevronDown, Check, Loader2,
+  Trash2, AlertTriangle
 } from 'lucide-react';
 import { fetchApifyBalance } from '../services/api';
 
@@ -18,11 +19,30 @@ export default function Header({
   projects = [],
   currentProjectId,
   setCurrentProjectId,
-  onOpenCreateProject
+  onOpenCreateProject,
+  onDeleteProject
 }) {
   const [apifyData, setApifyData] = useState(null);
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const dropdownRef = useRef(null);
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete || !onDeleteProject) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteProject(projectToDelete.id);
+      setProjectToDelete(null);
+      setIsProjectDropdownOpen(false);
+    } catch (err) {
+      setDeleteError(err.message || 'Ошибка удаления проекта');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     fetchApifyBalance()
@@ -109,29 +129,51 @@ export default function Header({
                     {projects.map(p => {
                       const isSelected = p.id === (currentProject?.id);
                       return (
-                        <button
+                        <div
                           key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setCurrentProjectId(p.id);
-                            setIsProjectDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all group ${
                             isSelected
                               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                              : 'text-slate-100 hover:bg-slate-800 hover:text-white'
+                              : 'text-slate-100 hover:bg-slate-800/80 hover:text-white'
                           }`}
                         >
-                          <div className="flex items-center space-x-2 truncate">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentProjectId(p.id);
+                              setIsProjectDropdownOpen(false);
+                            }}
+                            className="flex-1 flex items-center space-x-2 truncate text-left cursor-pointer py-0.5"
+                          >
                             <span className="truncate">{p.name}</span>
                             {p.is_default && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded border flex-shrink-0 ${
+                                isSelected 
+                                  ? 'bg-white/20 text-white border-white/30' 
+                                  : 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30'
+                              }`}>
                                 Основной
                               </span>
                             )}
+                          </button>
+
+                          <div className="flex items-center space-x-1 flex-shrink-0 ml-1.5">
+                            {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                            {!p.is_default && onDeleteProject && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setProjectToDelete(p);
+                                }}
+                                title="Удалить проект"
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-white flex-shrink-0 ml-2" />}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -358,6 +400,66 @@ export default function Header({
         </div>
 
       </div>
+
+      {/* Delete Project Confirmation Modal */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0f172a] border border-rose-500/30 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Удалить проект?</h3>
+                <p className="text-xs text-slate-400">Это действие невозможно отменить</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300">
+              Вы действительно хотите удалить проект <span className="font-bold text-white">«{projectToDelete.name}»</span>?
+              Все связанные с ним базы лидов, продукты и кампании будут также удалены.
+            </p>
+
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectToDelete(null);
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Удаление...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Удалить проект</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

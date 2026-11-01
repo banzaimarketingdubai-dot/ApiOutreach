@@ -331,13 +331,13 @@ export async function updateProject(projectId, data) {
 }
 
 export async function deleteProject(projectId) {
-  const res = await fetch(`${API_ROOT}${API_BASE}/projects/${projectId}`, {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to delete project');
+    throw new Error(err.detail || 'Не удалось удалить проект');
   }
   return true;
 }

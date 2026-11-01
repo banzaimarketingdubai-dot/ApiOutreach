@@ -19,7 +19,7 @@ import CreateProjectModal from './components/CreateProjectModal';
 import ReviewQueue from './components/ReviewQueue';
 import InboxHub from './components/InboxHub';
 import CampaignLaunchModal from './components/CampaignLaunchModal';
-import { fetchLeads, fetchCampaigns, fetchStats, fetchProjects } from './services/api';
+import { fetchLeads, fetchCampaigns, fetchStats, fetchProjects, deleteProject } from './services/api';
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -113,6 +113,24 @@ export default function App() {
     setCurrentProjectId(newProjId);
     setSelectedAudienceId('');
     localStorage.setItem('current_project_id', newProjId);
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    try {
+      await deleteProject(projectId);
+      const updated = projects.filter(p => p.id !== projectId);
+      setProjects(updated);
+      if (currentProjectId === projectId) {
+        const nextProj = updated.find(p => p.is_default) || updated[0];
+        if (nextProj) {
+          handleProjectChange(nextProj.id);
+        }
+      }
+      return true;
+    } catch (err) {
+      handleApiError(err);
+      throw err;
+    }
   };
 
   const loadLeads = async () => {
@@ -210,6 +228,7 @@ export default function App() {
         currentProjectId={currentProjectId}
         setCurrentProjectId={handleProjectChange}
         onOpenCreateProject={() => setIsCreateProjectModalOpen(true)}
+        onDeleteProject={handleDeleteProject}
       />
 
       {/* Main Content Area */}
