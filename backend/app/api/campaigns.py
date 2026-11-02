@@ -33,14 +33,20 @@ async def create_campaign(
     await db.refresh(campaign)
 
     import logging
+    from datetime import datetime
     logger = logging.getLogger(__name__)
     # Launch Celery background task
     try:
         run_campaign_scraping.delay(str(campaign.id))
         logger.info(f"Successfully queued celery task for campaign {campaign.id}")
+        init_log = {"level": "info", "message": "Запрос на парсинг отправлен в очередь Celery.", "timestamp": datetime.utcnow().isoformat() + "Z"}
+        campaign.logs = [init_log]
+        await db.commit()
     except Exception as e:
         logger.error(f"Failed to queue celery task: {e}")
-        pass
+        warn_log = {"level": "warning", "message": f"Очередь задач Celery временно недоступна ({e}). Нажмите 'Запустить парсинг' для повтора.", "timestamp": datetime.utcnow().isoformat() + "Z"}
+        campaign.logs = [warn_log]
+        await db.commit()
 
     return campaign
 
@@ -86,12 +92,40 @@ async def update_campaign(
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
     
+    if body.campaign_name is not None:
+        c.campaign_name = body.campaign_name
     if body.target_geo is not None:
         c.target_geo = body.target_geo
     if body.target_niches is not None:
         c.target_niches = body.target_niches
     if body.ai_config is not None:
         c.ai_config = {**c.ai_config, **body.ai_config}
+    if body.status is not None:
+        c.status = body.status
+    if body.project_id is not None:
+        c.project_id = body.project_id
+        from app.models.lead import Lead
+        from sqlalchemy import update
+        await db.execute(
+            update(Lead).where(Lead.campaign_id == campaign_id).values(project_id=body.project_id)
+        )
+    if body.audience_id is not None:
+        c.audience_id = body.audience_id
+        from app.models.lead import Lead
+        from sqlalchemy import update
+        await db.execute(
+            update(Lead).where(Lead.campaign_id == campaign_id).values(audience_id=body.audience_id)
+        )
+        try:
+            from app.api.audiences import compute_audience_stats
+            from app.models.audience import Audience
+            aud_stats = await compute_audience_stats(db, body.audience_id)
+            aud_res = await db.execute(select(Audience).where(Audience.id == body.audience_id))
+            target_aud = aud_res.scalars().first()
+            if target_aud:
+                target_aud.stats = aud_stats
+        except Exception as aud_err:
+            logger.warning(f"Failed to update audience stats: {aud_err}")
     
     await _append_log(c, db, "info", "Campaign parameters updated on-the-fly.")
     await db.commit()
@@ -132,10 +166,18 @@ async def start_campaign_task(
         raise HTTPException(status_code=404, detail="Campaign not found")
     
     c.status = CampaignStatus.RUNNING
+    await _append_log(c, db, "info", "Оператор запустил выполнение парсинга.")
     await db.commit()
 
-    task = run_campaign_scraping.delay(str(c.id))
-    return {"message": "Campaign pipeline launched", "task_id": task.id, "campaign_id": c.id}
+    task_id = None
+    try:
+        task = run_campaign_scraping.delay(str(c.id))
+        task_id = task.id
+    except Exception as e:
+        logger.error(f"Failed to queue task via celery: {e}")
+        await _append_log(c, db, "error", f"Ошибка отправки задачи в Celery: {e}")
+
+    return {"message": "Campaign pipeline launched", "task_id": task_id, "campaign_id": c.id}
 
 async def _append_log(campaign, db, level: str, msg: str):
     from datetime import datetime

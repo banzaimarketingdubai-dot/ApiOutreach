@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Play, Sparkles, Server, CheckCircle2, Clock, Trash } from 'lucide-react';
-import { createCampaign, deleteCampaign } from '../services/api';
+import { createCampaign, deleteCampaign, startCampaign } from '../services/api';
 import CampaignControlPanel from './CampaignControlPanel';
 
-export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, campaigns = [] }) {
+export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, campaigns = [], currentProjectId = null, selectedAudienceId = null }) {
   const [campaignName, setCampaignName] = useState('');
   const [geo, setGeo] = useState('');
   const [niche, setNiche] = useState('');
@@ -17,6 +17,8 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
     setSubmitting(true);
     try {
       const payload = {
+        project_id: currentProjectId || null,
+        audience_id: selectedAudienceId || null,
         campaign_name: campaignName,
         target_geo: geo,
         target_niches: [niche],
@@ -209,13 +211,32 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                           {c.stats ? `Scraped: ${c.stats.total_scraped || 0} | New: ${c.stats.new_leads_created || 0}` : 'In Queue'}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <button 
-                            onClick={(e) => handleDelete(e, c.id)}
-                            className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-500 hover:text-red-400 transition"
-                            title="Delete Campaign"
-                          >
-                            <Trash className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
+                            {c.status === 'PENDING' && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await startCampaign(c.id);
+                                    if (onCampaignCreated) onCampaignCreated();
+                                  } catch (err) {
+                                    alert("Ошибка запуска: " + err.message);
+                                  }
+                                }}
+                                className="p-1.5 hover:bg-emerald-500/20 rounded-md text-emerald-400 hover:text-emerald-300 transition"
+                                title="Запустить парсинг сейчас"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-emerald-400" />
+                              </button>
+                            )}
+                            <button 
+                              onClick={(e) => handleDelete(e, c.id)}
+                              className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-500 hover:text-red-400 transition"
+                              title="Delete Campaign"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

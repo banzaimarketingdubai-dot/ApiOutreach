@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, X, Check, RefreshCw, Send, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { generateAIStrategy, createCampaign } from '../services/api';
 
-export default function AIStrategistModal({ isOpen, onClose, onCampaignCreated }) {
+export default function AIStrategistModal({ isOpen, onClose, onCampaignCreated, currentProjectId = null, selectedAudienceId = null }) {
   const [goal, setGoal] = useState('');
   const [geo, setGeo] = useState('');
   const [notes, setNotes] = useState('');
@@ -54,6 +54,8 @@ export default function AIStrategistModal({ isOpen, onClose, onCampaignCreated }
     setLaunching(true);
     try {
       const payload = {
+        project_id: currentProjectId || null,
+        audience_id: selectedAudienceId || null,
         campaign_name: editingConfig.campaign_name,
         target_geo: editingConfig.target_geo,
         target_niches: editingConfig.target_niches,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCampaignStatus, retryFailed, pauseCampaign, resumeCampaign, stopCampaign } from '../services/api';
+import { getCampaignStatus, retryFailed, pauseCampaign, resumeCampaign, stopCampaign, startCampaign } from '../services/api';
 import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight, Target, RefreshCw } from 'lucide-react';
 import EditCampaignModal from './EditCampaignModal';
 import LeadScoreSettingsModal from './LeadScoreSettingsModal';
@@ -151,6 +151,19 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
            </button>
         </div>
         <div className="flex space-x-2">
+           {['PENDING', 'CANCELLED'].includes(status) && (
+             <button 
+               onClick={async () => { 
+                 try {
+                   await startCampaign(campaignId); 
+                   setData({...data, status: 'RUNNING'});
+                 } catch(e) { alert("Ошибка запуска: " + e.message); }
+               }}
+               className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+             >
+               <Play className="w-3 h-3 fill-emerald-400" /> <span>Запустить парсинг</span>
+             </button>
+           )}
            {status === 'RUNNING' && (
              <button 
                onClick={async () => { 

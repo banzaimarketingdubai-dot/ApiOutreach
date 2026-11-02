@@ -163,6 +163,10 @@ export async function resetEnrichment(lead_ids) {
   });
 }
 
+export async function startCampaign(id) {
+  return apiCall(`${API_BASE}/campaigns/${id}/start`, { method: 'POST' });
+}
+
 export async function pauseCampaign(id) {
   return apiCall(`${API_BASE}/campaigns/${id}/suspend`, { method: 'POST' });
 }

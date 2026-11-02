@@ -322,6 +322,8 @@ export default function App() {
             onCampaignCreated={() => { loadCampaigns(); loadLeads(); }}
             onOpenAIStrategist={() => setIsAIModalOpen(true)}
             campaigns={campaigns}
+            currentProjectId={currentProjectId}
+            selectedAudienceId={selectedAudienceId}
           />
         )}
         {activeTab === 'merge' && (
@@ -383,6 +385,8 @@ export default function App() {
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
         onCampaignCreated={() => { loadCampaigns(); loadLeads(); }}
+        currentProjectId={currentProjectId}
+        selectedAudienceId={selectedAudienceId}
       />
 
       {/* Lead Detail Slide-out Drawer */}
