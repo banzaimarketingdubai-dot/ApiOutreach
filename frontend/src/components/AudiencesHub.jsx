@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Upload, Sparkles, Database, Mail, Phone, 
-  Trash2, RefreshCw, CheckCircle2, AlertCircle, ArrowUpRight, 
+  Trash2, RefreshCw, CheckCircle2, AlertCircle, AlertTriangle, ArrowUpRight, 
   Layers, Filter, FileText, Activity, Play, FileSpreadsheet, ExternalLink, Loader2
 } from 'lucide-react';
 import { 
@@ -300,27 +300,59 @@ export default function AudiencesHub({
 
                 </div>
 
-                {/* Live Parser Progress Indicator if campaign is attached */}
+                {/* Live Parser Progress Indicator or Error Alert */}
                 {(() => {
                   const audCamp = campaigns.find(c => c.audience_id === aud.id);
-                  if (!audCamp) return null;
-                  const isRunning = audCamp.status === 'RUNNING';
+                  const lastError = aud.stats?.last_error || audCamp?.error_log;
+                  const isFailed = audCamp?.status === 'FAILED' || Boolean(lastError);
+                  const isRunning = audCamp?.status === 'RUNNING';
+                  const isPending = audCamp?.status === 'PENDING';
+
+                  if (!audCamp && !lastError) return null;
+
+                  if (isFailed) {
+                    return (
+                      <div className="mt-3 p-3 rounded-xl bg-rose-500/15 border border-rose-500/35 text-xs flex items-start justify-between gap-2 animate-fade-in shadow-inner">
+                        <div className="flex items-start space-x-2 min-w-0">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-bold text-rose-200">Ошибка сбора контактов</div>
+                            <div className="text-[10px] text-rose-300 font-mono line-clamp-2 mt-0.5" title={lastError || "Сбой парсера"}>
+                              {lastError || "Произошла ошибка при парсинге карт."}
+                            </div>
+                          </div>
+                        </div>
+                        {audCamp && (
+                          <button
+                            onClick={() => setLiveCampaignId(audCamp.id)}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold text-rose-200 bg-rose-500/25 hover:bg-rose-500/35 border border-rose-500/40 flex items-center space-x-1 transition-all flex-shrink-0 cursor-pointer"
+                            title="Открыть детали ошибки и повторить"
+                          >
+                            <span>Подробнее</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 flex items-center justify-between text-xs animate-fade-in">
                       <div className="flex items-center space-x-2 truncate">
-                        <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-blue-400 animate-ping' : audCamp.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                        <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-blue-400 animate-ping' : isPending ? 'bg-amber-400 animate-pulse' : audCamp?.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
                         <span className="text-[11px] font-medium text-slate-300 truncate">
-                          {isRunning ? 'Идет сбор контактов...' : 'Парсинг карт завершен'}
+                          {isRunning ? 'Идет сбор контактов...' : isPending ? 'Ожидание запуска парсинга' : 'Парсинг карт завершен'}
                         </span>
                       </div>
-                      <button
-                        onClick={() => setLiveCampaignId(audCamp.id)}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 flex items-center space-x-1 transition-all flex-shrink-0 cursor-pointer"
-                        title="Открыть живые логи и статус выполнения"
-                      >
-                        <Activity className="w-3 h-3 text-blue-400" />
-                        <span>Живой прогресс</span>
-                      </button>
+                      {audCamp && (
+                        <button
+                          onClick={() => setLiveCampaignId(audCamp.id)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 flex items-center space-x-1 transition-all flex-shrink-0 cursor-pointer"
+                          title="Открыть живые логи и статус выполнения"
+                        >
+                          <Activity className="w-3 h-3 text-blue-400" />
+                          <span>Живой прогресс</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })()}

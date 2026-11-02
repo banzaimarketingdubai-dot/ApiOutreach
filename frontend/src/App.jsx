@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
 import Header from './components/Header';
 import StatsCards from './components/StatsCards';
 import MasterDataGrid from './components/MasterDataGrid';
@@ -50,6 +51,7 @@ export default function App() {
 
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const notifiedFailedCampaigns = useRef(new Set());
   const [stats, setStats] = useState({ total: 0, whatsapp: 0, telegram: 0, viber: 0, email: 0, phone: 0 });
   const [filters, setFilters] = useState({ 
     city: '', min_score: '', min_rating: '', max_rating: '', search: '', 
@@ -154,6 +156,38 @@ export default function App() {
     try {
       const data = await fetchCampaigns();
       setCampaigns(data || []);
+
+      // Notify user with toast if any campaign failed
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          if (c.status === 'FAILED' && !notifiedFailedCampaigns.current.has(c.id)) {
+            notifiedFailedCampaigns.current.add(c.id);
+            toast.error(
+              (t) => (
+                <div className="flex flex-col space-y-1 pr-2">
+                  <div className="font-bold text-xs text-rose-300 flex items-center space-x-1">
+                    <span>⚠️ Ошибка парсинга:</span>
+                    <span className="truncate max-w-[200px] text-white">{c.campaign_name}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-mono line-clamp-2">
+                    {c.error_log || 'Сбой выполнения сбора данных в Apify'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      setActiveTab('builder');
+                    }}
+                    className="mt-1 text-[10px] text-blue-400 hover:text-blue-300 underline font-semibold text-left cursor-pointer"
+                  >
+                    Открыть детали в Campaign Builder →
+                  </button>
+                </div>
+              ),
+              { id: `failed-camp-${c.id}`, duration: 10000 }
+            );
+          }
+        });
+      }
     } catch (err) {
       handleApiError(err);
     }
@@ -393,6 +427,20 @@ export default function App() {
       <LeadDrawer
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}
+      />
+
+      {/* Global Notifications Toaster */}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{ 
+          duration: 7000, 
+          style: { 
+            background: '#0f172a', 
+            color: '#f8fafc', 
+            border: '1px solid #334155',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)'
+          } 
+        }} 
       />
 
     </div>

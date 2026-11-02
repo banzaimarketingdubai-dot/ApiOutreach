@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Sparkles, Server, CheckCircle2, Clock, Trash } from 'lucide-react';
+import { Play, Sparkles, Server, CheckCircle2, Clock, Trash, AlertTriangle, RefreshCw } from 'lucide-react';
 import { createCampaign, deleteCampaign, startCampaign } from '../services/api';
 import CampaignControlPanel from './CampaignControlPanel';
 
@@ -195,13 +195,20 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                         onClick={() => setActiveCampaignId(c.id)}
                       >
                         <td className="py-3 px-3 font-semibold text-white group-hover:text-blue-400 transition-colors">
-                          {c.campaign_name}
+                          <div>{c.campaign_name}</div>
+                          {c.error_log && (
+                            <div className="text-[10px] text-rose-400 flex items-center space-x-1 mt-0.5 font-normal">
+                              <AlertTriangle className="w-3 h-3 flex-shrink-0 text-rose-400" />
+                              <span className="truncate max-w-[260px]" title={c.error_log}>{c.error_log}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-slate-300">{c.target_geo} / {c.target_niches?.join(', ')}</td>
                         <td className="py-3 px-3">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                             c.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                             c.status === 'RUNNING' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse' :
+                            c.status === 'FAILED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse' :
                             'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                           }`}>
                             {c.status}
@@ -212,7 +219,7 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                         </td>
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
-                            {c.status === 'PENDING' && (
+                            {['PENDING', 'FAILED'].includes(c.status) && (
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation();
@@ -223,10 +230,18 @@ export default function TaskBuilder({ onCampaignCreated, onOpenAIStrategist, cam
                                     alert("Ошибка запуска: " + err.message);
                                   }
                                 }}
-                                className="p-1.5 hover:bg-emerald-500/20 rounded-md text-emerald-400 hover:text-emerald-300 transition"
-                                title="Запустить парсинг сейчас"
+                                className={`p-1.5 rounded-md transition ${
+                                  c.status === 'FAILED'
+                                    ? 'hover:bg-rose-500/20 text-rose-400 hover:text-rose-300'
+                                    : 'hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300'
+                                }`}
+                                title={c.status === 'FAILED' ? "Повторить парсинг" : "Запустить парсинг сейчас"}
                               >
-                                <Play className="w-3.5 h-3.5 fill-emerald-400" />
+                                {c.status === 'FAILED' ? (
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Play className="w-3.5 h-3.5 fill-emerald-400" />
+                                )}
                               </button>
                             )}
                             <button 

@@ -138,7 +138,7 @@ async def get_campaign_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Campaign.status, Campaign.stats, Campaign.logs).where(Campaign.id == campaign_id)
+    stmt = select(Campaign.status, Campaign.stats, Campaign.logs, Campaign.error_log).where(Campaign.id == campaign_id)
     res = await db.execute(stmt)
     row = res.first()
     if not row:
@@ -150,7 +150,8 @@ async def get_campaign_status(
     return {
         "status": row.status,
         "stats": row.stats or {},
-        "logs": logs[-20:]
+        "logs": logs[-20:],
+        "error_log": row.error_log
     }
 
 @router.post("/{campaign_id}/start")

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCampaignStatus, retryFailed, pauseCampaign, resumeCampaign, stopCampaign, startCampaign } from '../services/api';
-import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight, Target, RefreshCw } from 'lucide-react';
+import { Play, Pause, Square, Activity, Database, Settings, X, ChevronRight, Target, RefreshCw, AlertTriangle } from 'lucide-react';
 import EditCampaignModal from './EditCampaignModal';
 import LeadScoreSettingsModal from './LeadScoreSettingsModal';
 
@@ -100,9 +100,43 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
         </div>
         <div className="p-4 text-center">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Errors</div>
-          <div className="text-2xl font-bold text-rose-400">{stats.errors || 0}</div>
+          <div className={`text-2xl font-bold ${(stats.errors || 0) > 0 ? 'text-rose-400 animate-pulse' : 'text-slate-400'}`}>
+            {stats.errors || 0}
+          </div>
         </div>
       </div>
+
+      {/* Prominent Error Notification Banner if failed */}
+      {(data.error_log || status === 'FAILED') && (
+        <div className="mx-6 mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs flex items-start space-x-3 animate-fade-in shadow-inner">
+          <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-rose-200 text-sm mb-1 flex items-center space-x-1.5">
+              <span>Сбой выполнения парсинга</span>
+            </h4>
+            <div className="text-rose-300 font-mono text-[11px] bg-black/60 p-2.5 rounded-xl border border-rose-500/20 break-words leading-relaxed">
+              {data.error_log || "Непредвиденный сбой конвейера. Проверьте терминал логов ниже."}
+            </div>
+            <div className="mt-2 text-slate-400 text-[11px]">
+              💡 <strong>Рекомендация:</strong> проверьте API-ключ Apify в Vault (раздел Настройки), баланс аккаунта или скорректируйте геолокацию/запросы, затем нажмите <strong>«Повторить парсинг»</strong>.
+            </div>
+          </div>
+          <button 
+            onClick={async () => {
+              try {
+                await startCampaign(campaignId);
+                setData({...data, status: 'RUNNING', error_log: null});
+              } catch(e) {
+                alert("Ошибка перезапуска: " + e.message);
+              }
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-lg shadow-rose-600/30 transition-all flex-shrink-0 text-xs cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Повторить</span>
+          </button>
+        </div>
+      )}
 
       {/* Live Terminal Log */}
       <div className="flex-1 bg-black p-4 overflow-y-auto font-mono text-[11px] leading-relaxed">
@@ -110,12 +144,17 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
           <div className="text-slate-600 italic">Waiting for pipeline events...</div>
         ) : (
           logs.map((log, i) => (
-            <div key={i} className="mb-1 flex space-x-2">
-              <span className="text-slate-600">[{log.timestamp || new Date().toISOString().split('T')[1].slice(0,8)}]</span>
-              <span className={`
-                ${log.level === 'error' ? 'text-rose-400' : log.level === 'warning' ? 'text-amber-400' : 'text-emerald-400'}
-              `}>[{log.level?.toUpperCase() || 'INFO'}]</span>
-              <span className="text-slate-300">{log.message}</span>
+            <div 
+              key={i} 
+              className={`mb-1.5 flex space-x-2 ${
+                log.level === 'error' ? 'bg-rose-500/10 border border-rose-500/25 p-2 rounded-lg text-rose-200' : ''
+              }`}
+            >
+              <span className="text-slate-600 flex-shrink-0">[{log.timestamp || new Date().toISOString().split('T')[1].slice(0,8)}]</span>
+              <span className={`flex-shrink-0 font-bold ${
+                log.level === 'error' ? 'text-rose-400' : log.level === 'warning' ? 'text-amber-400' : 'text-emerald-400'
+              }`}>[{log.level?.toUpperCase() || 'INFO'}]</span>
+              <span className={log.level === 'error' ? 'text-rose-200 break-words' : 'text-slate-300'}>{log.message}</span>
             </div>
           ))
         )}
@@ -151,7 +190,7 @@ export default function CampaignControlPanel({ campaignId, onClose }) {
            </button>
         </div>
         <div className="flex space-x-2">
-           {['PENDING', 'CANCELLED'].includes(status) && (
+           {['PENDING', 'CANCELLED', 'FAILED'].includes(status) && (
              <button 
                onClick={async () => { 
                  try {
